@@ -6,7 +6,6 @@ from datetime import timedelta
 from passlib.context import CryptContext
 from server.models import User
 from server.models import get_skt_time
-from server.schemas import UserSchema  # Pydantic 모델 임포트
 from server.db import get_db
 from server.schemas import UserSchema, UserCreate, UserLogin
 import os
@@ -88,6 +87,7 @@ async def create_user(createData: UserCreate,db: Session = Depends(get_db)):
 async def read_user(std_id: str, db: Session = Depends(get_db)):
   # std_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.std_id == std_id).first()
+  print(user)
   
   if not user:
     raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")

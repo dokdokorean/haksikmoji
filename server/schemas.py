@@ -2,13 +2,21 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
 
+class SchoolSchema(BaseModel):
+  id: int
+  name: str
+  campus: str
+  
+  class Config:
+    from_attributes = True
+
 class UserSchema(BaseModel):
   uid: int
   std_id: str
   name:str
   email: EmailStr
   password: str
-  school_id: int
+  school: SchoolSchema
   sign_url: Optional[str] = None
   created_at: Optional[datetime] = None
   
@@ -28,3 +36,11 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
   std_id: str
   password: str
+  
+
+
+
+class Cafeteria(BaseModel):
+  id: int
+  name: str
+  school: SchoolSchema
