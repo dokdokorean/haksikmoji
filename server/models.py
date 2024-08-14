@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 # SQLAlchemy 모델에서 테이블의 각 칠드를 정의하기 위한 모듈
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import pytz
 
@@ -20,6 +21,23 @@ class User(Base):
   name = Column(String(20), nullable=False)
   email = Column(String(30), nullable=False)
   password = Column(String(500), nullable=False)
-  school_id = Column(Integer, nullable=False)
+  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
+  school = relationship('School')
+  
   sign_url = Column(String(3000))
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
+
+class School(Base):
+  __tablename__ = 'school'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(String(50), nullable=False)
+  campus = Column(String(50), nullable=False)
+  
+class Cafeteria(Base):
+  __tablename__ = 'cafeteria'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(String(100), nullable=False)
+  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
+  school=relationship('School')

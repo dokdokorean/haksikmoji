@@ -1,6 +1,9 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 # from server.db import get_haksik_db_connection
+from server.db import get_db
+from server.models import Cafeteria
 
 
 haksik_router = APIRouter(
@@ -9,7 +12,13 @@ haksik_router = APIRouter(
 
 
 @haksik_router.get('')
-async def get_haksik():
+async def get_haksik(db: Session = Depends(get_db)):
+  # haksikEnt = db.query(Cafeteria).all()
+  # for cafeteria in haksikEnt:
+  #   print(cafeteria.id)
+  #   print(cafeteria.name)
+  #   print(cafeteria.school_id)
+  
   haksikData = {
     1: {
       'menu' : {
@@ -30,22 +39,7 @@ async def get_haksik():
       }
     },
     2: {
-      'menu' : {
-        'breakfast' : {
-          'MON': ['김치볶음밥', '제육볶음', '된장찌개', '해물볶음밥', '불고기', '비빔냉면'],
-          'TUE': ['초계국수', '순두부찌개', '돈가스', '카레라이스', '비빔밥', '쫄면'],
-          'WED': ['우삼겹덮밥', '콩나물국밥', '김치찜', '차돌박이된장찌개', '해물파전', '냉모밀'],
-          'THU': ['짜장면', '짬뽕', '라멘', '스팸김치볶음밥', '치킨가스', '비빔국수'],
-          'FRI': ['소불고기덮밥', '사골곰탕', '비빔밥', '닭갈비', '떡국', '김밥']
-        },
-        'lunch' : {
-          'MON': ['김치찌개', '참치마요덮밥', '감자탕', '오므라이스', '돈가스', '우동', '제육볶음'],
-          'TUE': ['칼국수', '된장찌개', '불고기덮밥', '새우볶음밥', '치킨마요', '', '미트볼'],
-          'WED': ['소고기무국', '카레라이스', '', '치즈돈가스', '순두부찌개', '콩나물국밥', '라면'],
-          'THU': ['비빔국수', '해물파전', '매운갈비찜', '라멘', '', '차돌박이된장찌개', '김밥'],
-          'FRI': ['갈비탕', '삼계탕', '부대찌개', '', '', '제육덮밥', '만두국']
-        }
-      }
+      
     }
   }
   # connection = get_haksik_db_connection()
