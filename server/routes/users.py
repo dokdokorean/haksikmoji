@@ -4,17 +4,21 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from datetime import timedelta
 from passlib.context import CryptContext
-from server.models import User
+from server.models import User, School
 from server.models import get_skt_time
 from server.db import get_db
-from server.schemas import UserSchema, UserCreate, UserLogin
+from server.schemas import UserSchema, UserCreate, UserLogin, VerifyEmail
 import os
 import jwt as pyjwt
+import requests
 from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+univcert_url="https://univcert.com/api/v1"
+
 SECRET_KEY = os.getenv('SECRET_KEY')
+UNIVCERT_API_KEY = os.getenv('UNIVCERT_API_KEY')
 # 비밀번호 해싱
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -46,14 +50,96 @@ async def read_users(db: Session = Depends(get_db)):
 
 # 이메일 검증 API
 @users_router.post('/valid-email')
-async def check_email(email: EmailStr, db: Session = Depends(get_db)):
+async def check_email(inputData: VerifyEmail, db: Session = Depends(get_db)):
 
-  existing_user = db.query(User).filter(User.email == email).first()
+
+  existing_user = db.query(User).filter(User.email == inputData.email).first()
   if existing_user:
     raise HTTPException(status_code=400, detail="중복된 이메일입니다.")
   
-  return JSONResponse(status_code=200, content={'success' : True, 'message' : '가입 가능한 이메일'})
+  
+  headers={
+    "Content-Type" : "application/json"
+  }
+  
+  school = db.query(School).filter(School.id == inputData.school_id).first()
+  
+  if inputData.verify_code is None:
+    # 인증 코드 발송
+    payload={
+      "key" : UNIVCERT_API_KEY,
+      "email" : inputData.email,
+      "univName" : f"{school.name}학교",
+      "univ_check" : True
+    }
+    
+    try:
+      response = requests.post(f"{univcert_url}/certify", json=payload, headers=headers)
+      
+      api_response = response.json()
+      print(api_response)
+      
+      if api_response.get('success') == True:
+        return JSONResponse(status_code=200, content={'success' : True, 'message' : '이메일로 인증 번호 전송'})
+      else:
+        raise HTTPException(status_code=400, detail="인증 코드 발송 실패")
+      
+    except requests.exceptions.RequestException as e:
+      raise HTTPException(status_code=400, detail=f"{str(e)}")
+  
+  else:
+    # 인증 코드 검증
+    payload={
+      "key" : UNIVCERT_API_KEY,
+      "email" : inputData.email,
+      "univName" : f"{school.name}학교",
+      "code" : inputData.verify_code
+    }
+    
+    try:
+      response = requests.post(f"{univcert_url}/certifycode", json=payload, headers=headers)
+      
+      api_response = response.json()
+      print(api_response)
+      
+      if api_response.get('success') == True:
+        return JSONResponse(status_code=200, content={'success' : True, 'message' : '인증 완료'})
+      
+    except requests.exceptions.RequestException as e:
+      raise HTTPException(status_code=400, detail=f"{str(e)}")
+    
+@users_router.get('/valid-email/list')
+async def get_valid_email():
+  headers={
+    "Content-Type" : "application/json"
+  }
+  # 인증된 유저 목록 초기화
+  payload={
+    "key" : UNIVCERT_API_KEY,
+  }
+  
+  response=requests.post(f"{univcert_url}/certifiedlist", json=payload, headers=headers)
+  api_response = response.json()
+  
+  return JSONResponse(status_code=200, content={'success': True, 'message' : '목록 조회 완료', 'body': api_response})
+  
 
+@users_router.post('/valid-email/reset')
+async def reset_verify():
+  headers={
+    "Content-Type" : "application/json"
+  }
+  # 인증된 유저 목록 초기화
+  payload={
+    "key" : UNIVCERT_API_KEY,
+  }
+  response=requests.post(f"{univcert_url}/clear", json=payload, headers=headers)
+  
+  if response.json().get('success') == True:
+    return JSONResponse(status_code=200, content={'success': True, 'message' : '목록 초기화 완료'})
+  else:
+    return JSONResponse(status_code=400, content={'success': False, 'message' : '목록 초기화 실패'})
+    
 
 # 유저 생성 API
 @users_router.post('', response_model=UserCreate)

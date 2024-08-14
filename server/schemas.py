@@ -37,6 +37,10 @@ class UserLogin(BaseModel):
   std_id: str
   password: str
   
+class VerifyEmail(BaseModel):
+  email: EmailStr
+  school_id: int
+  verify_code: str = None
 
 
 
