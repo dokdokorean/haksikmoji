@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional
 
@@ -11,7 +11,7 @@ class SchoolSchema(BaseModel):
     from_attributes = True
 
 class UserSchema(BaseModel):
-  uid: int
+  uid: int = Field(..., description="DB에서 자동적으로 id 증가")
   std_id: str
   name:str
   email: EmailStr
@@ -19,6 +19,7 @@ class UserSchema(BaseModel):
   school: SchoolSchema
   sign_url: Optional[str] = None
   created_at: Optional[datetime] = None
+  role: int = Field(..., description="1 : 일반 유저 / 2 : 매장 사장님 / 3 : 쿠폰 관리 교직원")
   
   class Config:
     # SQLAlchemy 모델과 호환되도록 설정

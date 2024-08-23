@@ -26,6 +26,7 @@ class User(Base):
   
   sign_url = Column(String(3000))
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
+  role = Column(Integer, nullable=False)
 
 class School(Base):
   __tablename__ = 'school'
