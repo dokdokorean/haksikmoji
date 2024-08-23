@@ -8,5 +8,5 @@ router = APIRouter()
 async def get_root():
   return {'message' : 'API Connected'}
 
-router.include_router(haksik_router)
-router.include_router(users_router)
+router.include_router(haksik_router, tags=["학식 API"])
+router.include_router(users_router, tags=["로그인/회원가입 API"])
