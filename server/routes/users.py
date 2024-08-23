@@ -1,3 +1,7 @@
+import os
+import jwt as pyjwt
+import requests
+import base64
 from fastapi import APIRouter, HTTPException, Depends, Response
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -8,9 +12,6 @@ from server.models import User, School
 from server.models import get_skt_time
 from server.db import get_db
 from server.schemas import UserSchema, UserCreate, UserLogin, VerifyEmail
-import os
-import jwt as pyjwt
-import requests
 from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -65,15 +66,14 @@ async def check_email(inputData: VerifyEmail, db: Session = Depends(get_db)):
       response = requests.post(f"{univcert_url}/certify", json=payload, headers=headers)
       
       api_response = response.json()
-      print(api_response)
       
       if api_response.get('success') == True:
-        return JSONResponse(status_code=200, content={'success' : True, 'message' : '이메일로 인증 번호 전송'})
+        return JSONResponse(status_code=200, content={'success' : True, 'message' : '인증 메일이 발송되었습니다.'})
       else:
-        raise HTTPException(status_code=400, detail="인증 코드 발송 실패")
+        return JSONResponse(status_code=400, content={'success' : False, 'message': api_response.get('message')})
       
     except requests.exceptions.RequestException as e:
-      raise HTTPException(status_code=400, detail=f"{str(e)}")
+      return JSONResponse(status_code=400, content={'success' : False, 'message' : e})
   
   else:
     # 인증 코드 검증
@@ -92,9 +92,11 @@ async def check_email(inputData: VerifyEmail, db: Session = Depends(get_db)):
       
       if api_response.get('success') == True:
         return JSONResponse(status_code=200, content={'success' : True, 'message' : '인증 완료'})
+      else:
+        return JSONResponse(status_code=400, content={'success' : False, 'message' : api_response.get('message')})
       
     except requests.exceptions.RequestException as e:
-      raise HTTPException(status_code=400, detail=f"{str(e)}")
+      return JSONResponse(status_code=400, content={'success' : False, 'message' : e})
     
 @users_router.get('/valid-email/list', summary="검증된 이메일 리스트 조회")
 async def get_valid_email():
@@ -162,6 +164,28 @@ async def create_user(createData: UserCreate,db: Session = Depends(get_db)):
   
   hashed_password = pwd_context.hash(createData.password)
   
+  # 사인 데이터 처리
+  if createData.sign_url:
+    try:
+      # Base64 인코딩 부분을 추출 및 디코딩
+      sign_data = createData.sign_url.split(",")[1]
+      sign_image_data = base64.b64decode(sign_data)
+      
+      # 파일 이름 생성 및 파일 경로 지정
+      file_name = f"{createData.std_id}_sign.png"
+      file_path = os.path.join("server","static", "signatures", file_name)
+      
+      # 이미지 데이터를 파일로 저장
+      with open(file_path, "wb") as f:
+        f.write(sign_image_data)
+      
+      sign_url_data = f"/server/static/signatures/{file_name}"
+    except Exception as e:
+      raise HTTPException(status_code=500, detail="사인을 등록하지 못하였습니다")
+
+  else:
+    sign_url_data = None
+  
   # 새 유저 객체 생성
   new_user = User(
     std_id=createData.std_id,
@@ -169,7 +193,7 @@ async def create_user(createData: UserCreate,db: Session = Depends(get_db)):
     email=createData.email,
     password=hashed_password,
     school_id=createData.school_id,
-    sign_url=createData.sign_url,
+    sign_url=sign_url_data,
     created_at=get_skt_time()
   )
   
