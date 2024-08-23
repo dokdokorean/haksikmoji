@@ -3,7 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from server.routes.__init__ import router
 
 
-app = FastAPI()
+app = FastAPI(
+  openapi_tags=[
+    {
+      "name": "학식 API",
+      "description": ""
+    },
+    {
+      "name": "로그인/회원가입 API",
+      "description": ""
+    }
+    
+    
+      # {
+      #     "name": "Users",
+      #     "description": "Operations with users. The **login** logic is also here.",
+      # },
+      # {
+      #     "name": "Items",
+      #     "description": "Manage items. So **add**, **delete**, and **update** items."
+      # },
+  ]
+)
 
 # CORS 설정
 app.add_middleware(
