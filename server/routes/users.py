@@ -186,7 +186,7 @@ async def create_user(createData: UserCreate,db: Session = Depends(get_db)):
   else:
     sign_url_data = None
   
-  # 새 유저 객체 생성
+  # 새 일반 유저 객체 생성
   new_user = User(
     std_id=createData.std_id,
     name=createData.name,
@@ -194,7 +194,8 @@ async def create_user(createData: UserCreate,db: Session = Depends(get_db)):
     password=hashed_password,
     school_id=createData.school_id,
     sign_url=sign_url_data,
-    created_at=get_skt_time()
+    created_at=get_skt_time(),
+    role=1,
   )
   
   # 새 유저 등록
