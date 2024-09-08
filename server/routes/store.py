@@ -20,6 +20,16 @@ async def get_store_list(db: Session = Depends(get_db)):
     
   return store_list
 
+
+# 음식점 매장 조회
+@store_router.get('/food', response_model=list[StoreListSchema], summary="음식점 매장 조회")
+async def get_store_list(db: Session = Depends(get_db)):
+  # 연세대 미래
+  store_list = db.query(Store).filter(Store.school_id == 1, Store.category_id == 1).all()
+  print(store_list)
+    
+  return store_list
+
 @store_router.get('/{store_id}', response_model=StoreSchema, summary="각 매장 상세 정보 조회")
 async def get_store(store_id: int, db:Session = Depends(get_db)):
   store = db.query(Store).filter(Store.sid == store_id).first()
