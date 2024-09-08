@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from server.routes.__init__ import router
 from server.scheduler.update_store_status_scheduler import start_scheduler
@@ -10,7 +11,6 @@ import pytz
 def get_skt_time():
   kst = pytz.timezone('Asia/Seoul')
   return datetime.now(kst)
-
 
 app = FastAPI(
   openapi_tags=[
@@ -37,6 +37,8 @@ app.add_middleware(
     allow_methods=["*"],  # 모든 HTTP 메서드 허용 (GET, POST, 등)
     allow_headers=["*"],  # 모든 HTTP 헤더 허용
 )
+
+app.mount("/images", StaticFiles(directory="server/images"), name="images")
 
 app.include_router(router, prefix="/api")
 

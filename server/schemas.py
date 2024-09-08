@@ -77,9 +77,20 @@ class StoreSchema(BaseModel):
   store_location: str
   is_open: str
   store_img_url: str
-  school: SchoolSchema
   category: CategorySchema
   store_hours: List[StoreHoursSchema]
 
+  class Config:
+    from_attributes = True
+    
+class StoreListSchema(BaseModel):
+  sid: int
+  store_name: str
+  store_location: str
+  is_open: str
+  store_img_url: str
+  school: SchoolSchema
+  category: CategorySchema
+  
   class Config:
     from_attributes = True
