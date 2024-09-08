@@ -69,6 +69,18 @@ class StoreHoursSchema(BaseModel):
 
   class Config:
     from_attributes = True
+    
+class StoreUpdateNoticeSchema(BaseModel):
+  title:str
+  content:str
+  
+
+class StoreNoticeSchema(BaseModel):
+  id: int
+  title: str
+  content: str
+  created_at: Optional[datetime] = None
+  updated_at: Optional[datetime] = None
 
 class StoreSchema(BaseModel):
   sid: int
@@ -79,6 +91,7 @@ class StoreSchema(BaseModel):
   store_img_url: str
   category: CategorySchema
   store_hours: List[StoreHoursSchema]
+  store_notice: List[StoreNoticeSchema]
 
   class Config:
     from_attributes = True

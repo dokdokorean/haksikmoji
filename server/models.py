@@ -65,6 +65,7 @@ class Store(Base):
   category = relationship('Category')
   
   store_hours = relationship('StoreHours', back_populates='store')
+  store_notice = relationship('Notice')
   
   def update_is_open(self, db_session):
     now = get_skt_time().time().replace(microsecond=0)
@@ -107,3 +108,14 @@ class DayOfWeek(Base):
   
   id = Column(Integer, primary_key=True, autoincrement=True)
   name = Column(Enum('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'))
+
+
+class Notice(Base):
+  __tablename__ = 'notice'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  title = Column(String(200))
+  content = Column(String(5000))
+  created_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
+  updated_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)

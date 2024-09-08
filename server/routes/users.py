@@ -1,24 +1,21 @@
 import os
-import jwt as pyjwt
 import requests
 import base64
-from fastapi import APIRouter, HTTPException, Depends, Response
+from server.auth import create_jwt_token
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
-from datetime import timedelta
+from pydantic import EmailStr
 from passlib.context import CryptContext
 from server.models import User, School
 from server.models import get_skt_time
 from server.db import get_db
 from server.schemas import UserSchema, UserCreate, UserLogin, VerifyEmail
-from fastapi.security import OAuth2PasswordBearer
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 univcert_url="https://univcert.com/api/v1"
 
-SECRET_KEY = os.getenv('SECRET_KEY')
+
 UNIVCERT_API_KEY = os.getenv('UNIVCERT_API_KEY')
 # 비밀번호 해싱
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -26,16 +23,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 users_router = APIRouter(
   prefix="/users"
 )
-
-def create_jwt_token(user):
-  payload = {
-    "uid": user.uid,
-    "std_id": user.std_id,
-    "exp": get_skt_time() + timedelta(hours=1)  # 토큰 유효 기간 설정 (예: 1시간)
-  }
-  
-  token = pyjwt.encode(payload, SECRET_KEY, algorithm="HS256")
-  return token
 
 # 이메일 검증 API
 @users_router.post('/valid-email', summary="이메일을 통한 검증 및 인증코드 발송")
@@ -147,7 +134,7 @@ async def login_user(loginData: UserLogin, db: Session = Depends(get_db)):
   # JWT 생성
   token = create_jwt_token(user)
   
-  # HTTP 응답 헤더에 토큰을 포함
+  # 응답에 토큰을 포함
   response = JSONResponse(content={"success": True, "message": "로그인 성공", 'body' : token})
   return response
 
