@@ -111,10 +111,10 @@ async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session
   if store_data.store_hours:
       for updated_hours in store_data.store_hours:
         # day_of_week.name을 이용하여 day_of_week_id 찾기
-        day_of_week = db.query(DayOfWeek).filter(DayOfWeek.name == updated_hours.day_of_week.name).first()
+        day_of_week = db.query(DayOfWeek).filter(DayOfWeek.name == updated_hours.date).first()
 
         if not day_of_week:
-            raise HTTPException(status_code=400, detail=f'잘못된 요일: {updated_hours.day_of_week.name}')
+            raise HTTPException(status_code=400, detail=f'잘못된 요일: {updated_hours.date}')
 
         # store_hours에 맞는 요일 찾기
         store_hour = db.query(StoreHours).filter(
@@ -125,21 +125,21 @@ async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session
         # store_hours가 있는 경우 업데이트
         if store_hour:
           # 운영시간 업데이트
-          store_hour.opening_time = updated_hours.runing_time.opening_time if updated_hours.runing_time.opening_time is not None else None
-          store_hour.closing_time = updated_hours.runing_time.closing_time if updated_hours.runing_time.closing_time is not None else None
+          store_hour.opening_time = updated_hours.content.runing_time.opening_time if updated_hours.content.runing_time.opening_time is not None else None
+          store_hour.closing_time = updated_hours.content.runing_time.closing_time if updated_hours.content.runing_time.closing_time is not None else None
 
           # 휴식시간 업데이트
-          store_hour.break_start_time = updated_hours.break_time.break_start_time if updated_hours.break_time.break_start_time is not None else None
-          store_hour.break_exit_time = updated_hours.break_time.break_exit_time if updated_hours.break_time.break_exit_time is not None else None
+          store_hour.break_start_time = updated_hours.content.break_time.break_start_time if updated_hours.content.break_time.break_start_time is not None else None
+          store_hour.break_exit_time = updated_hours.content.break_time.break_exit_time if updated_hours.content.break_time.break_exit_time is not None else None
         else:
             # store_hours 데이터가 없으면 새로운 레코드 추가
             new_store_hour = StoreHours(
               store_id=store.sid,
               day_of_week_id=day_of_week.id,
-              opening_time=updated_hours.runing_time.opening_time if updated_hours.runing_time.opening_time is not None else None,
-              closing_time=updated_hours.runing_time.closing_time if updated_hours.runing_time.closing_time is not None else None,
-              break_start_time=updated_hours.break_time.break_start_time if updated_hours.break_time.break_start_time is not None else None,
-              break_exit_time=updated_hours.break_time.break_exit_time if updated_hours.break_time.break_exit_time is not None else None
+              opening_time=updated_hours.content.runing_time.opening_time if updated_hours.content.runing_time.opening_time is not None else None,
+              closing_time=updated_hours.content.runing_time.closing_time if updated_hours.content.runing_time.closing_time is not None else None,
+              break_start_time=updated_hours.content.break_time.break_start_time if updated_hours.content.break_time.break_start_time is not None else None,
+              break_exit_time=updated_hours.content.break_time.break_exit_time if updated_hours.content.break_time.break_exit_time is not None else None
             )
             db.add(new_store_hour)
 

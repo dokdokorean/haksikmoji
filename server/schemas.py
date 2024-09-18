@@ -136,9 +136,8 @@ class StoreListSchema(BaseModel):
     from_attributes = True
     
 class StoreHoursUpdateSchema(BaseModel):
-  day_of_week: DayOfWeekSchema
-  runing_time: TimePeriodSchema
-  break_time: BreakTimeSchema
+  date: str
+  content: StoreHoursSchema
 
 class StoreUpdateSchema(BaseModel):
   store_number: Optional[str] = None
