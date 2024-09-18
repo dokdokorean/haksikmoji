@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from datetime import datetime, time
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 class SchoolSchema(BaseModel):
   id: int
@@ -62,13 +62,41 @@ class Cafeteria(BaseModel):
 
 # Store 관련
 
-class StoreHoursSchema(BaseModel):
-  day_of_week: DayOfWeekSchema
-  opening_time: Optional[time] = None
-  closing_time: Optional[time] = None
+# class TimePeriodSchema(BaseModel):
+#   opening_time: Optional[time] = None
+#   closing_time: Optional[time] = None
+  
+#   class Config:
+#     from_attributes = True
+#     json_encoders = {
+#         time: lambda v: v.strftime('%H:%M') if v else None  # 시:분 형식으로 변환
+#     }
 
+class BreakTimeSchema(BaseModel):
+  break_start_time: Optional[time] = None
+  break_exit_time: Optional[time] = None
+  
   class Config:
     from_attributes = True
+    json_encoders = {
+      time: lambda v: v.strftime('%H:%M') if v else None
+    }
+
+
+class TimePeriodSchema(BaseModel):
+  opening_time: Optional[time] = None
+  closing_time: Optional[time] = None
+  
+  class Config:
+    from_attributes = True
+    json_encoders = {
+      time: lambda v: v.strftime('%H:%M') if v else None
+    }
+
+class StoreHoursSchema(BaseModel):
+  runing_time: TimePeriodSchema
+  break_time: BreakTimeSchema
+  
     
 class StoreUpdateNoticeSchema(BaseModel):
   title:str
@@ -90,7 +118,7 @@ class StoreSchema(BaseModel):
   is_open: str
   store_img_url: str
   category: CategorySchema
-  store_hours: List[StoreHoursSchema]
+  store_hours: Dict[str, StoreHoursSchema]
   store_notice: List[StoreNoticeSchema]
 
   class Config:
@@ -102,8 +130,20 @@ class StoreListSchema(BaseModel):
   store_location: str
   is_open: str
   store_img_url: str
-  school: SchoolSchema
   category: CategorySchema
   
+  class Config:
+    from_attributes = True
+    
+class StoreHoursUpdateSchema(BaseModel):
+  day_of_week: DayOfWeekSchema
+  runing_time: TimePeriodSchema
+  break_time: BreakTimeSchema
+
+class StoreUpdateSchema(BaseModel):
+  store_number: Optional[str] = None
+  store_location: Optional[str] = None
+  store_hours: Optional[List[StoreHoursUpdateSchema]] = None
+
   class Config:
     from_attributes = True

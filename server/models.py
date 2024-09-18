@@ -77,11 +77,16 @@ class Store(Base):
       closing_time = store_hours_today.closing_time
       
       if closing_time == time(0, 0):
-        
         closing_time = time(23, 59, 59)
       
       if store_hours_today.opening_time <= now <= closing_time:
-        self.is_open = 'opened'
+        if store_hours_today.break_start_time and store_hours_today.break_exit_time:
+          if store_hours_today.break_start_time <= now <= store_hours_today.break_exit_time:
+            self.is_open = 'breaktime'
+          else:
+            self.is_open = 'opened'
+        else:
+          self.is_open = 'opened'
       else:
         self.is_open = 'closed'
     else:
@@ -98,6 +103,9 @@ class StoreHours(Base):
   day_of_week = relationship('DayOfWeek')
   opening_time = Column(Time)
   closing_time = Column(Time)
+  
+  break_start_time = Column(Time)
+  break_exit_time = Column(Time)
   
   store = relationship('Store', back_populates='store_hours')
 
