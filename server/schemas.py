@@ -62,16 +62,6 @@ class Cafeteria(BaseModel):
 
 # Store 관련
 
-# class TimePeriodSchema(BaseModel):
-#   opening_time: Optional[time] = None
-#   closing_time: Optional[time] = None
-  
-#   class Config:
-#     from_attributes = True
-#     json_encoders = {
-#         time: lambda v: v.strftime('%H:%M') if v else None  # 시:분 형식으로 변환
-#     }
-
 class BreakTimeSchema(BaseModel):
   break_start_time: Optional[time] = None
   break_exit_time: Optional[time] = None
