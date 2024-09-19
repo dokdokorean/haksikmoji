@@ -1,71 +1,78 @@
 from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, Enum, Time
-# SQLAlchemy 모델에서 테이블의 각 칠드를 정의하기 위한 모듈
+# SQLAlchemy 모델에서 테이블의 각 필드를 정의하기 위한 모듈
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime, time
-import pytz
+from datetime import time
+from server.utils import get_skt_time
+
 
 # 기본 클래스를 생성
 Base = declarative_base()
 
-def get_skt_time():
-  kst = pytz.timezone('Asia/Seoul')
-  return datetime.now(kst)
-
-# Base를 상속받아 모델 정의
-class User(Base):
-  __tablename__ = 'user' # 테이블 이름
-  
-  uid = Column(Integer, primary_key=True, autoincrement=True)
-  std_id = Column(String(30), nullable=False)
-  name = Column(String(20), nullable=False)
-  email = Column(String(30), nullable=False)
-  password = Column(String(500), nullable=False)
-  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
-  school = relationship('School')
-  
-  sign_url = Column(String(3000))
-  created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
-  role = Column(Integer, nullable=False)
-
+# 학교
 class School(Base):
   __tablename__ = 'school'
   
   id = Column(Integer, primary_key=True, autoincrement=True)
   name = Column(String(50), nullable=False)
   campus = Column(String(50), nullable=False)
-  
-class Category(Base):
+
+
+# 매장 카테고리
+class StoreCategory(Base):
   __tablename__ = 'category'
   
   id = Column(Integer, primary_key=True, autoincrement=True)
   main_category = Column(String(50), nullable=False)
   sub_category = Column(String(50))
-
-class Cafeteria(Base):
-  __tablename__ = 'cafeteria'
+  
+class DayOfWeek(Base):
+  __tablename__ = 'day_of_week'
   
   id = Column(Integer, primary_key=True, autoincrement=True)
-  name = Column(String(100), nullable=False)
-  school_id = Column(Integer, ForeignKey('school.id'),nullable=False)
-  school = relationship('School')
+  name = Column(Enum('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'))
+
+# 매장 운영 및 쉬는시간
+class StoreHours(Base):
+  __tablename__ = 'store_hours'
   
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  day_of_week_id = Column(Integer, ForeignKey('day_of_week.id'))
+  day_of_week = relationship(DayOfWeek)
+  opening_time = Column(Time)
+  closing_time = Column(Time)
+  break_start_time = Column(Time)
+  break_exit_time = Column(Time)
+
+# 매장 공지사항
+class StoreNotice(Base):
+  __tablename__ = 'notice'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  title = Column(String(200))
+  content = Column(String(5000))
+  created_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
+  updated_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
+
+
 class Store(Base):
   __tablename__ = 'store'
   
   sid = Column(Integer, primary_key=True, autoincrement=True)
-  store_name = Column(String(255))
-  store_number = Column(String(255))
-  store_location = Column(String(200))
-  is_open = Column(Enum('opened', 'closed', 'breaktime'))
-  store_img_url = Column(String(3000))
+  store_name = Column(String(255), nullable=True)
+  store_number = Column(String(255), nullable=True)
+  store_location = Column(String(200), nullable=True)
+  is_open = Column(Enum('opened', 'closed', 'breaktime'), nullable=True)
+  store_img_url = Column(String(3000), nullable=True)
   school_id = Column(Integer, ForeignKey('school.id'))
-  school = relationship('School')
+  school = relationship(School)
   category_id = Column(Integer, ForeignKey('category.id'))
-  category = relationship('Category')
+  category = relationship(StoreCategory)
   
-  store_hours = relationship('StoreHours', back_populates='store')
-  store_notice = relationship('Notice')
+  store_hours = relationship(StoreHours)
+  store_notice = relationship(StoreNotice)
   
   def update_is_open(self, db_session):
     now = get_skt_time().time().replace(microsecond=0)
@@ -93,37 +100,29 @@ class Store(Base):
       self.is_open = 'closed'
     
     db_session.commit()
-    
-class StoreHours(Base):
-  __tablename__ = 'store_hours'
   
-  id = Column(Integer, primary_key=True, autoincrement=True)
-  store_id = Column(Integer, ForeignKey('store.sid'))
-  day_of_week_id = Column(Integer, ForeignKey('day_of_week.id'))
-  day_of_week = relationship('DayOfWeek')
-  opening_time = Column(Time)
-  closing_time = Column(Time)
+
+# Base를 상속받아 모델 정의
+class User(Base):
+  __tablename__ = 'user' # 테이블 이름
   
-  break_start_time = Column(Time)
-  break_exit_time = Column(Time)
+  uid = Column(Integer, primary_key=True, autoincrement=True)
+  std_id = Column(String(30), nullable=False)
+  name = Column(String(20), nullable=False)
+  email = Column(String(30), nullable=False)
+  password = Column(String(500), nullable=False)
+  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
+  school = relationship('School')
   
-  store = relationship('Store', back_populates='store_hours')
+  sign_url = Column(String(3000))
+  created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
+  role = Column(Integer, nullable=False)
 
 
-
-class DayOfWeek(Base):
-  __tablename__ = 'day_of_week'
+# class Cafeteria(Base):
+#   __tablename__ = 'cafeteria'
   
-  id = Column(Integer, primary_key=True, autoincrement=True)
-  name = Column(Enum('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'))
-
-
-class Notice(Base):
-  __tablename__ = 'notice'
-  
-  id = Column(Integer, primary_key=True, autoincrement=True)
-  store_id = Column(Integer, ForeignKey('store.sid'))
-  title = Column(String(200))
-  content = Column(String(5000))
-  created_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
-  updated_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
+#   id = Column(Integer, primary_key=True, autoincrement=True)
+#   name = Column(String(100), nullable=False)
+#   school_id = Column(Integer, ForeignKey('school.id'),nullable=False)
+#   school = relationship('School')
