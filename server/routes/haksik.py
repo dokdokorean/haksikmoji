@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 # from server.db import get_haksik_db_connection
 from server.db import get_db
-from server.models import Cafeteria
+# from server.models import Cafeteria
 
 
 haksik_router = APIRouter(

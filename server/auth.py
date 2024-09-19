@@ -2,9 +2,10 @@ import os
 import jwt
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
-from server.models import User, get_skt_time
+from server.utils import get_skt_time
 from fastapi.security import OAuth2PasswordBearer
 from server.db import get_db
+from server.models import User
 
 from datetime import timedelta
 
@@ -28,19 +29,20 @@ def create_jwt_token(user):
   token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
   return token
 
-
 # 토큰 검증 함수
 def verify_jwt_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+  print(token)
   try:
-    
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     user_id: str = payload.get("uid")
     
     if user_id is None:
       raise HTTPException(status_code=403, detail="토큰이 유효하지 않음")
     
+    
     # 유저 정보 조회
     user = db.query(User).filter(User.uid == user_id).first()
+    
     if user is None:
       raise HTTPException(status_code=403, detail="유저를 찾을 수 없음")
     
