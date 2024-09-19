@@ -23,7 +23,7 @@ UNIVCERT_API_KEY = os.getenv('UNIVCERT_API_KEY')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 users_router = APIRouter(
-  prefix="/users"
+  prefix="/v1/users"
 )
 
 # # 이메일 검증 API

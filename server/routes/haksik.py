@@ -7,7 +7,7 @@ from server.db import get_db
 
 
 haksik_router = APIRouter(
-  prefix="/haksik"
+  prefix="/v1/haksik"
 )
 
 
