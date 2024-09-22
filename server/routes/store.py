@@ -1,11 +1,9 @@
+from sqlalchemy import or_, and_, distinct
 from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-# from server.models import Store, Notice, User, get_skt_time, StoreHours, DayOfWeek
-# from server.schemas import StoreSchema, StoreListSchema, StoreNoticeSchema, StoreUpdateNoticeSchema, StoreUpdateSchema
-# from server.db import get_haksik_db_connection
-from server.schemas import StoreDetailSchema, StoreListSchema, StoreUpdateSchema, StoreUpdateNoticeSchema 
-from server.models import Store, DayOfWeek, StoreHours, StoreNotice, User
+from sqlalchemy.orm import Session, aliased
+from server.schemas import StoreDetailSchema, StoreListSchema, StoreUpdateSchema, StoreUpdateNoticeSchema, StoreSearchSchema
+from server.models import Store, DayOfWeek, StoreHours, StoreNotice, User, StoreCategory
 from fastapi.security.api_key import APIKeyHeader
 from server.db import get_db
 from server.auth import verify_jwt_token
@@ -22,6 +20,47 @@ async def get_store_all(db: Session = Depends(get_db)):
   store_all = db.query(Store).filter(Store.school_id == 1).all()
   
   return store_all
+
+
+# *검색어 자동완성 관련*
+@store_router.get('/search-keyword', response_model=list[StoreSearchSchema], summary="검색 자동 완성 키워드 10개 조회")
+async def search_keyword_store(query: str, db: Session = Depends(get_db), limit: int = 10):
+  
+  if not query:
+      raise HTTPException(status_code=400, detail="")
+
+  category_alias = aliased(StoreCategory)
+  
+  stores = db.query(Store).join(category_alias, Store.category).filter(
+      and_(
+          Store.school_id == 1,
+          or_(
+              Store.store_name.ilike(f"%{query}%")
+          )
+      )
+  ).group_by(Store.store_name).limit(limit).all()
+
+  return stores
+
+@store_router.get('/search', response_model=list[StoreListSchema], summary="검색한 매장 조회")
+async def search_keyword_store(query: str, db: Session = Depends(get_db)):
+  
+  if not query:
+      raise HTTPException(status_code=400, detail="")
+
+  category_alias = aliased(StoreCategory)
+  
+  stores = db.query(Store).join(category_alias, Store.category).filter(
+    and_(
+      Store.school_id == 1,
+      or_(
+          Store.store_name.ilike(f"%{query}%"),
+          category_alias.main_category.ilike(f"%{query}%"),
+      )
+    )
+  ).all()
+
+  return stores
 
 
 # 음식점 매장 조회
@@ -123,6 +162,7 @@ async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session
   
   db.commit()
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 수정되었습니다!'})
+
 
 
 # *공지 관련*

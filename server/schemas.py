@@ -1,3 +1,4 @@
+
 from pydantic import BaseModel, EmailStr, Field, validator
 from datetime import datetime, time
 from typing import Optional, List, Dict
@@ -76,6 +77,14 @@ class StoreListSchema(BaseModel):
   is_open: Optional[str] = None
   store_img_url: Optional[str] = None
   category: StoreCategorySchema
+
+# 매장 검색 Schema
+class StoreSearchSchema(BaseModel):
+  # sid:int
+  store_name: Optional[str] = None
+  
+  class Config:
+    from_attributes = True
 
 # 상세 매장 조회 Schema
 class StoreDetailSchema(StoreListSchema):
