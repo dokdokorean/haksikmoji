@@ -25,10 +25,10 @@ async def get_store_all(db: Session = Depends(get_db)):
 
 
 # 음식점 매장 조회
-@store_router.get('/food', response_model=list[StoreListSchema], summary="카페 매장 조회")
+@store_router.get('/food', response_model=list[StoreListSchema], summary="음식점 매장 조회")
 async def get_cafe_store_list(db: Session = Depends(get_db)):
   # 연세대 미래
-  store_list = db.query(Store).filter(Store.school_id == 1, Store.category_id == 2).all()
+  store_list = db.query(Store).filter(Store.school_id == 1, Store.category_id == 1).all()
     
   return store_list
 
