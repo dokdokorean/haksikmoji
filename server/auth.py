@@ -3,14 +3,14 @@ import jwt
 from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from server.utils import get_skt_time
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import APIKeyHeader
 from server.db import get_db
 from server.models import User
 
 from datetime import timedelta
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = APIKeyHeader(name="Authorization")
 
 # 비밀키와 알고리즘 설정
 SECRET_KEY = "your_secret_key"
@@ -31,7 +31,6 @@ def create_jwt_token(user):
 
 # 토큰 검증 함수
 def verify_jwt_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-  print(token)
   try:
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     user_id: str = payload.get("uid")
@@ -52,3 +51,5 @@ def verify_jwt_token(token: str = Depends(oauth2_scheme), db: Session = Depends(
     raise HTTPException(status_code=403, detail="토큰이 만료됨")
   except jwt.InvalidTokenError:
     raise HTTPException(status_code=403, detail="토큰이 유효하지 않음")
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")

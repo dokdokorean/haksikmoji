@@ -74,6 +74,9 @@ class Store(Base):
   store_hours = relationship(StoreHours)
   store_notice = relationship(StoreNotice)
   
+  # 즐겨찾기한 사용자와의 관계 설정
+  favorited_by_users = relationship('UserFavoriteStore', back_populates='store')
+  
   def update_is_open(self, db_session):
     now = get_skt_time().time().replace(microsecond=0)
     today_day_id = get_skt_time().weekday() + 1
@@ -100,7 +103,19 @@ class Store(Base):
       self.is_open = 'closed'
     
     db_session.commit()
+
+# 즐겨찾기 테이블 정의 (User와 Store 간 다대다 관계)
+class UserFavoriteStore(Base):
+  __tablename__ = 'user_favorite_store'
   
+  uid = Column(Integer, ForeignKey('user.uid'), primary_key=True)
+  store_id = Column(Integer, ForeignKey('store.sid'), primary_key=True)
+  created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
+
+  # 관계 설정
+  user = relationship('User', back_populates='favorite_stores')
+  store = relationship('Store', back_populates='favorited_by_users')
+
 
 # Base를 상속받아 모델 정의
 class User(Base):
@@ -117,6 +132,9 @@ class User(Base):
   sign_url = Column(String(3000))
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
   role = Column(Integer, nullable=False)
+  
+  # 즐겨찾기한 매장과의 관계 설정
+  favorite_stores = relationship('UserFavoriteStore', back_populates='user')
 
 
 # class Cafeteria(Base):

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, aliased
 from server.schemas import StoreDetailSchema, StoreListSchema, StoreUpdateSchema, StoreUpdateNoticeSchema, StoreSearchSchema
-from server.models import Store, DayOfWeek, StoreHours, StoreNotice, User, StoreCategory
+from server.models import Store, DayOfWeek, StoreHours, StoreNotice, User, StoreCategory, UserFavoriteStore
 from fastapi.security.api_key import APIKeyHeader
 from server.db import get_db
 from server.auth import verify_jwt_token
@@ -243,4 +243,66 @@ async def delete_notice(store_id: int, notice_id:int, db:Session = Depends(get_d
   
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 삭제되었습니다!'})
   
-  
+
+# 즐겨찾기 추가
+@store_router.post('/{store_id}/favorite', summary="매장 즐겨찾기 추가")
+async def create_favorite_store(store_id: int, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+    # JWT 토큰을 통해 유저 확인
+    current_user = db.query(User).filter(User.uid == token.uid).first()
+
+    if not current_user:
+        raise HTTPException(status_code=400, detail="유효하지 않은 사용자입니다.")
+    
+    # print(current_user.std_id)
+
+    # 해당 매장이 존재하는지 확인
+    store = db.query(Store).filter(Store.sid == store_id).first()
+
+    if not store:
+        raise HTTPException(status_code=400, detail="해당 매장이 존재하지 않습니다.")
+
+    # 이미 즐겨찾기에 추가된 매장인지 확인
+    existing_favorite = db.query(UserFavoriteStore).filter(
+        UserFavoriteStore.uid == current_user.uid,
+        UserFavoriteStore.store_id == store_id
+    ).first()
+
+    if existing_favorite:
+        raise HTTPException(status_code=400, detail="이미 즐겨찾기한 매장입니다.")
+
+    # 즐겨찾기 추가
+    favorite = UserFavoriteStore(uid=current_user.uid, store_id=store.sid, created_at=get_skt_time())
+    db.add(favorite)
+    db.commit()
+
+    return JSONResponse(status_code=200, content={'success': True, 'message': '즐겨찾기에 추가되었습니다!'})
+
+# 즐겨찾기 삭제
+@store_router.delete('/{store_id}/favorite', summary="매장 즐겨찾기 삭제")
+async def delete_favorite_store(store_id: int, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+    # JWT 토큰을 통해 유저 확인
+    current_user = db.query(User).filter(User.uid == token.uid).first()
+
+    if not current_user:
+        raise HTTPException(status_code=400, detail="유효하지 않은 사용자입니다.")
+    
+    # 해당 매장이 존재하는지 확인
+    store = db.query(Store).filter(Store.sid == store_id).first()
+
+    if not store:
+        raise HTTPException(status_code=400, detail="해당 매장이 존재하지 않습니다.")
+
+    # 즐겨찾기에 이미 등록된 매장인지 확인
+    existing_favorite = db.query(UserFavoriteStore).filter(
+        UserFavoriteStore.uid == current_user.uid,
+        UserFavoriteStore.store_id == store_id
+    ).first()
+
+    if not existing_favorite:
+        raise HTTPException(status_code=400, detail="즐겨찾기에 등록되지 않은 매장입니다.")
+
+    # 즐겨찾기에서 매장 삭제
+    db.delete(existing_favorite)
+    db.commit()
+
+    return JSONResponse(status_code=200, content={'success': True, 'message': '즐겨찾기에서 삭제되었습니다.'})

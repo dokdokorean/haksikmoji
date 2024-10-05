@@ -115,19 +115,21 @@ class UserSchema(BaseModel):
   sign_url: Optional[str] = None
   created_at: Optional[datetime] = None
   role: int = Field(1, description="1 : 일반 유저 / 2 : 매장 사장님 / 3 : 쿠폰 관리 교직원")
+  # 즐겨찾기한 매장 리스트 추가
+  favorite_stores: List[StoreListSchema] = []  # 유저가 즐겨찾기한 매장 리스트
   
   class Config:
     # SQLAlchemy 모델과 호환되도록 설정
     from_attributes = True # 기존 orm_mode
 
 
-# class UserCreate(BaseModel):
-#   std_id: str
-#   name:str
-#   email: EmailStr
-#   password: str
-#   school_id: int
-#   sign_url: str = None # 선택적으로 받을 수 있는 필드
+class UserCreateSchema(BaseModel):
+  std_id: str
+  name:str
+  email: EmailStr
+  password: str
+  school_id: int
+  sign_url: str = None # 선택적으로 받을 수 있는 필드
   
 class UserLoginSchema(BaseModel):
   std_id: str
