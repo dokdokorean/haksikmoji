@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, Enum, Time
+from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey, Enum, Time, Boolean
 # SQLAlchemy 모델에서 테이블의 각 필드를 정의하기 위한 모듈
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -53,9 +53,9 @@ class StoreNotice(Base):
   store_id = Column(Integer, ForeignKey('store.sid'))
   title = Column(String(200))
   content = Column(String(5000))
+  is_pinned = Column(Boolean, default=False, nullable=True)
   created_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
   updated_at = Column(TIMESTAMP, default=get_skt_time(), nullable=False)
-
 
 class Store(Base):
   __tablename__ = 'store'
@@ -74,9 +74,15 @@ class Store(Base):
   store_hours = relationship(StoreHours)
   store_notice = relationship(StoreNotice)
   
+  users = relationship("User", back_populates="store")
+  
   # 즐겨찾기한 사용자와의 관계 설정
   favorited_by_users = relationship('UserFavoriteStore', back_populates='store')
   
+  # 매장 메뉴
+  menus = relationship('Menu', back_populates='store')
+  menu_categories = relationship('MenuCategory', back_populates='store')
+
   def update_is_open(self, db_session):
     now = get_skt_time().time().replace(microsecond=0)
     today_day_id = get_skt_time().weekday() + 1
@@ -117,7 +123,7 @@ class UserFavoriteStore(Base):
   store = relationship('Store', back_populates='favorited_by_users')
 
 
-# Base를 상속받아 모델 정의
+# 유저 모델
 class User(Base):
   __tablename__ = 'user' # 테이블 이름
   
@@ -133,6 +139,9 @@ class User(Base):
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
   role = Column(Integer, nullable=False)
   
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  store = relationship("Store", back_populates="users")
+  
   # 즐겨찾기한 매장과의 관계 설정
   favorite_stores = relationship('UserFavoriteStore', back_populates='user')
 
@@ -144,3 +153,36 @@ class User(Base):
 #   name = Column(String(100), nullable=False)
 #   school_id = Column(Integer, ForeignKey('school.id'),nullable=False)
 #   school = relationship('School')
+
+# 매장 메뉴
+class Menu(Base):
+  __tablename__ = 'menu'
+  
+  mid = Column(Integer, primary_key=True, autoincrement=True)
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  store = relationship('Store', back_populates='menus')
+  category_id = Column(Integer, ForeignKey('menu_category.id'))
+  category = relationship('MenuCategory')
+  menu_name = Column(String(255), nullable=False)
+  menu_image_url = Column(String(3000), nullable=False)
+  
+  options = relationship('MenuOption', back_populates='menu')
+
+class MenuCategory(Base):
+  __tablename__ = 'menu_category'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  store_id = Column(Integer, ForeignKey('store.sid'))
+  store = relationship('Store', back_populates='menu_categories')
+  category_name = Column(String(255), nullable=False)
+  
+  menus = relationship('Menu', back_populates='category')
+
+class MenuOption(Base):
+  __tablename__ = 'menu_option'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  menu_id = Column(Integer, ForeignKey('menu.mid'))
+  menu = relationship('Menu', back_populates='options')
+  option_name = Column(String(255), nullable=True)
+  price = Column(String(255), nullable=False)

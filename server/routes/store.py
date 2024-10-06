@@ -114,6 +114,28 @@ async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
         'break_exit_time' : store_hour.break_exit_time.strftime('%H:%M') if store_hour.break_exit_time else None,
       }
     }
+  
+  categories = []
+  for category in store.menu_categories:
+    menus = []
+    for menu in category.menus:
+      options=[]
+      for option in menu.options:
+        options.append({
+          'option_name': option.option_name,
+          'price': option.price
+        })
+      
+      menus.append({
+        'menu_name': menu.menu_name,
+        'menu_image_url': menu.menu_image_url,
+        'options': options
+      })
+    
+    categories.append({
+      'category_name': category.category_name,
+      'menus': menus
+    })
     
   
   result_store = {
@@ -125,10 +147,12 @@ async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
     'store_img_url': store.store_img_url,
     'category': store.category,
     'store_hours': store_hours_dict,
-    'store_notice': store.store_notice
+    'store_notice': store.store_notice,
+    'menu': categories
   }
   
   return result_store
+
 
 @store_router.put('/{store_id}', summary="각 매장 상세 정보 수정")
 async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session = Depends(get_db)):
@@ -175,10 +199,17 @@ async def get_notice_store(store_id: int, db: Session = Depends(get_db)):
 
 
 @store_router.post('/{store_id}/notice', summary="각 매장 공지사항 등록")
-async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, db:Session = Depends(get_db)):
-  # 해당 사장님
-  # if current_user.role != 2:
-  #   raise HTTPException(status_code=403, detail="해당 작업을 수행할 권한이 없습니다.")
+async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+  
+  # 사장님이 아닐 때
+  if token.role != 2:
+    raise HTTPException(status_code=403, detail="해당 작업을 수행할 권한이 없습니다.")
+  
+  user_store = db.query(User).filter(User.uid == token.uid).first()
+  
+  # 해당 매장 사장님이 아닐 때
+  if not user_store or user_store.store_id != store_id:
+    raise HTTPException(status_code=403, detail="해당 매장에 대한 접근 권한이 없습니다.")
   
   new_notice = StoreNotice(
     title=notice_data.title,
@@ -208,7 +239,17 @@ async def get_notice(store_id: int, notice_id: int, db: Session = Depends(get_db
   return notice
 
 @store_router.put('/{store_id}/notice/{notice_id}', summary="각 매장의 해당하는 공지사항 하나 수정")
-async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateNoticeSchema, db: Session = Depends(get_db)):
+async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateNoticeSchema, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+  
+  # 사장님이 아닐 때
+  if token.role != 2:
+    raise HTTPException(status_code=403, detail="해당 작업을 수행할 권한이 없습니다.")
+  
+  user_store = db.query(User).filter(User.uid == token.uid).first()
+  
+  # 해당 매장 사장님이 아닐 때
+  if not user_store or user_store.store_id != store_id:
+    raise HTTPException(status_code=403, detail="해당 매장에 대한 접근 권한이 없습니다.")
   
   notice = db.query(StoreNotice).filter(StoreNotice.store_id == store_id, StoreNotice.id == notice_id).first()
   
@@ -225,12 +266,17 @@ async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateN
   
 
 @store_router.delete('/{store_id}/notice/{notice_id}', summary="각 매장 공지사항 삭제")
-async def delete_notice(store_id: int, notice_id:int, db:Session = Depends(get_db)):
+async def delete_notice(store_id: int, notice_id:int, db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
 
-  # 사장님이 이 매장에 해당하는 사장님인지 체크하는 로직도 짜야할 것
+  # 사장님이 아닐 때
+  if token.role != 2:
+    raise HTTPException(status_code=403, detail="해당 작업을 수행할 권한이 없습니다.")
   
-  # if current_user.role != 2:
-  #   raise HTTPException(status_code=403, detail="해당 작업을 수행할 권한이 없습니다.")
+  user_store = db.query(User).filter(User.uid == token.uid).first()
+  
+  # 해당 매장 사장님이 아닐 때
+  if not user_store or user_store.store_id != store_id:
+    raise HTTPException(status_code=403, detail="해당 매장에 대한 접근 권한이 없습니다.")
   
   notice = db.query(StoreNotice).filter(StoreNotice.store_id == store_id, StoreNotice.id == notice_id).first()
   

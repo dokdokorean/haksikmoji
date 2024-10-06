@@ -140,10 +140,10 @@ async def login_user(login_data: UserLoginSchema, db: Session = Depends(get_db))
   
   manager = True if user.role == 2 else False
   # 추후에 User모델에 Store연결해서 sid값 저장해서 보내줘야 함.
-  sid = 1 if manager else None
+  store_sid = user.store_id if manager else None
   
   # 응답에 토큰을 포함
-  response = JSONResponse(content={"success": True, "message": "로그인 성공", 'body' : token, 'user' : user.name, 'manager' : manager, 'sid' : sid})
+  response = JSONResponse(content={"success": True, "message": "로그인 성공", 'body' : token, 'user' : user.name, 'manager' : manager, 'sid' : store_sid})
   return response
 
 # 유저 생성 API
@@ -240,7 +240,8 @@ async def read_users(db: Session = Depends(get_db)):
             sign_url=user.sign_url,
             created_at=user.created_at,
             role=user.role,
-            favorite_stores=favorite_stores  # 즐겨찾기한 매장 리스트 추가
+            favorite_stores=favorite_stores,  # 즐겨찾기한 매장 리스트 추가
+            store_id=user.store_id
         )
 
         # 결과 리스트에 추가
@@ -284,7 +285,8 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
     sign_url=user.sign_url,
     created_at=user.created_at,
     role=user.role,
-    favorite_stores=favorite_stores  # 즐겨찾기한 매장 리스트 추가
+    favorite_stores=favorite_stores,  # 즐겨찾기한 매장 리스트 추가
+    store_id=user.store_id
   )
 
   return user_data

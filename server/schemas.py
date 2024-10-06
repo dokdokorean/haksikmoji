@@ -86,10 +86,34 @@ class StoreSearchSchema(BaseModel):
   class Config:
     from_attributes = True
 
+# 옵션별 메뉴 가격
+class MenuOptionSchema(BaseModel):
+    option_name: Optional[str]
+    price: str
+
+    class Config:
+        from_attributes = True
+
+class MenuSchema(BaseModel):
+    menu_name: str
+    menu_image_url: Optional[str]
+    options: List[MenuOptionSchema]
+
+    class Config:
+        from_attributes = True
+
+class MenuCategorySchema(BaseModel):
+    category_name: str
+    menus: List[MenuSchema]
+
+    class Config:
+        from_attributes = True
+
 # 상세 매장 조회 Schema
 class StoreDetailSchema(StoreListSchema):
   store_hours: Dict[str, StoreHoursSchema]
   store_notice: List[StoreNoticeSchema]
+  menu: List[MenuCategorySchema]
   
   class Config:
     from_attributes = True
@@ -117,6 +141,7 @@ class UserSchema(BaseModel):
   role: int = Field(1, description="1 : 일반 유저 / 2 : 매장 사장님 / 3 : 쿠폰 관리 교직원")
   # 즐겨찾기한 매장 리스트 추가
   favorite_stores: List[StoreListSchema] = []  # 유저가 즐겨찾기한 매장 리스트
+  store_id: Optional[int] = None
   
   class Config:
     # SQLAlchemy 모델과 호환되도록 설정
