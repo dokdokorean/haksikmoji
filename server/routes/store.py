@@ -1,7 +1,8 @@
 from sqlalchemy import or_, and_, distinct
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Depends, Response, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import desc
 from server.schemas import StoreDetailSchema, StoreListSchema, StoreUpdateSchema, StoreUpdateNoticeSchema, StoreSearchSchema
 from server.models import Store, DayOfWeek, StoreHours, StoreNotice, User, StoreCategory, UserFavoriteStore
 from fastapi.security.api_key import APIKeyHeader
@@ -192,14 +193,17 @@ async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session
 # *공지 관련*
 @store_router.get('/{store_id}/notice', summary="각 매장 공지사항 조회")
 async def get_notice_store(store_id: int, db: Session = Depends(get_db)):
-  
-  notice_list = db.query(StoreNotice).filter(StoreNotice.store_id == store_id).all()
-  
-  return notice_list
+    notice_list = (
+        db.query(StoreNotice)
+        .filter(StoreNotice.store_id == store_id)
+        .order_by(desc(StoreNotice.is_pinned), desc(StoreNotice.created_at))
+        .all()
+    )
+    return notice_list
 
 
 @store_router.post('/{store_id}/notice', summary="각 매장 공지사항 등록")
-async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, confirm: bool = Query(False), db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
   # 사장님이 아닐 때
   if token.role != 2:
@@ -211,9 +215,28 @@ async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, db:Ses
   if not user_store or user_store.store_id != store_id:
     raise HTTPException(status_code=403, detail="해당 매장에 대한 접근 권한이 없습니다.")
   
+  # 해당 공지사항을 고정하려고하는데 이미 고정된 공지사항이 있을 경우
+  if notice_data.is_pinned:
+    pinned_notice = db.query(StoreNotice).filter(StoreNotice.store_id == store_id, StoreNotice.is_pinned == True).first()
+    # 기존 고정 공지가 있고, 확인 요청(confirm)이 없는 경우 사용자에게 선택 요청
+    if pinned_notice and not confirm:
+      return JSONResponse(
+        status_code=409,
+        content={
+          'success': False,
+          'message': '이미 고정된 공지사항이 있습니다. 기존 공지를 해제하고 새 공지를 고정하시겠습니까?',
+        }
+      )
+
+    # confirm이 True인 경우 기존 공지 해제
+    if pinned_notice and confirm:
+      pinned_notice.is_pinned = False
+      db.add(pinned_notice)
+  
   new_notice = StoreNotice(
     title=notice_data.title,
     store_id=store_id,
+    is_pinned=notice_data.is_pinned,
     content=notice_data.content,
     created_at=get_skt_time(),
     updated_at=get_skt_time(),
@@ -239,7 +262,7 @@ async def get_notice(store_id: int, notice_id: int, db: Session = Depends(get_db
   return notice
 
 @store_router.put('/{store_id}/notice/{notice_id}', summary="각 매장의 해당하는 공지사항 하나 수정")
-async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateNoticeSchema, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateNoticeSchema, confirm: bool = Query(False), db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
   # 사장님이 아닐 때
   if token.role != 2:
@@ -256,8 +279,28 @@ async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateN
   if not notice:
     raise HTTPException(status_code=400, detail="해당 공지사항이 존재하지 않습니다!")
 
+  # 공지사항을 고정하려는 경우, 이미 고정된 공지가 있는지 확인
+  if notice_data.is_pinned:
+    pinned_notice = db.query(StoreNotice).filter(StoreNotice.store_id == store_id, StoreNotice.is_pinned == True, StoreNotice.id != notice_id).first()
+    
+    # 기존 고정 공지가 있고, 확인 요청이 없는 경우
+    if pinned_notice and not confirm:
+      return JSONResponse(
+        status_code=409,
+        content={
+          'success': False,
+          'message': '이미 고정된 공지사항이 있습니다. 기존 공지를 해제하고 새 공지를 고정하시겠습니까?',
+        }
+      )
+    
+    # confirm이 True인 경우 기존 고정 공지 해제
+    if pinned_notice and confirm:
+      pinned_notice.is_pinned = False
+      db.add(pinned_notice)
+
   notice.title = notice_data.title
-  notice.content = notice_data.content,
+  notice.content = notice_data.content
+  notice.is_pinned = notice_data.is_pinned
   notice.updated_at = get_skt_time()
   
   db.commit()

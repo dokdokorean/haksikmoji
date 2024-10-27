@@ -203,6 +203,7 @@ class UserLoginSchema(BaseModel):
 class StoreUpdateNoticeSchema(BaseModel):
   title:str
   content:str
+  is_pinned:bool
   
 
 # class StoreNoticeSchema(BaseModel):
