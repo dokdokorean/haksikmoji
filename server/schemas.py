@@ -134,7 +134,8 @@ class UserSchema(BaseModel):
   uid: int = Field(..., description="DB에서 자동적으로 id 증가")
   std_id: str
   name:str
-  email: EmailStr
+  phone_number: str
+  # email: EmailStr
   password: str
   school: SchoolSchema
   sign_url: Optional[str] = None
@@ -151,8 +152,9 @@ class UserSchema(BaseModel):
 
 class UserCreateSchema(BaseModel):
   std_id: str
-  name:str
-  email: EmailStr
+  name: str
+  phone_number: str
+  # email: EmailStr
   password: str
   school_id: int
   sign_url: str = None # 선택적으로 받을 수 있는 필드

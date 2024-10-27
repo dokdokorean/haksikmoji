@@ -1,6 +1,10 @@
 import os
 import requests
 import base64
+import hmac
+import hashlib
+import re
+import json
 from server.auth import create_jwt_token
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -14,6 +18,7 @@ from server.schemas import UserSchema, UserLoginSchema, StoreListSchema, UserCre
 from server.db import get_db
 from server.auth import verify_jwt_token
 from server.utils import get_skt_time
+import time
 # from server.schemas import UserSchema, UserCreate, UserLogin, VerifyEmail
 
 
@@ -21,12 +26,39 @@ univcert_url="https://univcert.com/api/v1"
 
 
 UNIVCERT_API_KEY = os.getenv('UNIVCERT_API_KEY')
+NAVER_CLOUD_ACCESS_KEY = os.getenv('NAVER_CLOUD_ACCESS_KEY')
+NAVER_CLOUD_SECRET_KEY = os.getenv('NAVER_CLOUD_SECRET_KEY')
+NOTIFICATION_SERVICE_ID = os.getenv('NOTIFICATION_SERVICE_ID')
+
+
+URL = "https://sens.apigw.ntruss.com"
+URI = f"/sms/v2/services/{NOTIFICATION_SERVICE_ID}/messages"
+
 # 비밀번호 해싱
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 users_router = APIRouter(
   prefix="/v1/users"
 )
+
+
+
+def makeSignature():
+  access_key=NAVER_CLOUD_ACCESS_KEY
+  secret_key=NAVER_CLOUD_SECRET_KEY
+  
+  timestamp = int(time.time() * 1000)
+  timestamp = str(timestamp)
+
+  secret_key=bytes(secret_key, 'UTF-8')
+  method = "POST"
+  
+  message = method + " " + URI + "\n" + timestamp + "\n" + access_key
+  message = bytes(message, 'UTF-8')
+  
+  signingKey = base64.b64encode(hmac.new(secret_key, message, digestmod=hashlib.sha256).digest())
+  return signingKey
+  
 
 # # 이메일 검증 API
 # @users_router.post('/valid-email', summary="이메일을 통한 검증 및 인증코드 발송")
@@ -153,9 +185,9 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
   if existing_user:
     raise HTTPException(status_code=400, detail="가입된 학번이 이미 존재합니다.")
   
-  existing_user = db.query(User).filter(User.email == createData.email).first()
+  existing_user = db.query(User).filter(User.phone_number == createData.phone_number).first()
   if existing_user:
-    raise HTTPException(status_code=400, detail="중복된 이메일입니다.")
+    raise HTTPException(status_code=400, detail="이미 인증된 전화번호가 있습니다.")
   
   hashed_password = pwd_context.hash(createData.password)
   
@@ -185,7 +217,8 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
   new_user = User(
     std_id=createData.std_id,
     name=createData.name,
-    email=createData.email,
+    # email=createData.email,
+    phone_number=createData.phone_number,
     password=hashed_password,
     school_id=createData.school_id,
     sign_url=sign_url_data,
@@ -199,6 +232,57 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
   db.refresh(new_user) # 새로 추가된 유저의 정보를 최신화
   
   return JSONResponse(status_code=201, content={'success': True, 'message' : '계정 생성 완료'})
+
+# 유저 핸드폰 번호 중복검사 및 인증번호 검증
+@users_router.post('/verification', summary='유저 휴대폰번호 중복체크 및 인증번호 검증')
+async def verification_phone(phone_number: str ,db: Session = Depends(get_db)):
+  
+  if not re.fullmatch(r"^010\d{8}$", phone_number):
+    raise HTTPException(status_code=400, detail="휴대폰 번호 형식이 올바르지 않습니다. 010으로 시작하는 11자리 번호를 입력하세요.")
+  
+  timestamp = int(time.time() * 1000)
+  timestamp = str(timestamp)
+  
+  existing_user = db.query(User).filter(User.phone_number == phone_number).first()
+  if existing_user:
+    raise HTTPException(status_code=400, detail="이미 인증된 전화번호가 있습니다.")
+  
+  signature = makeSignature()
+  
+  print(signature)
+  
+  header={
+    "Content-Type" : "application/json",
+    'x-ncp-apigw-timestamp' : timestamp,
+    'x-ncp-iam-access-key' : NAVER_CLOUD_ACCESS_KEY,
+    'x-ncp-apigw-signature-v2' : signature,
+  }
+  
+  data={
+    "type" : "SNS",
+    "from" : "",
+    "subject" : "학식모지 인증번호 테스트",
+    "content" : "[인증번호] 1234",
+    "messages" : [
+      {
+        "to": phone_number,
+      }
+    ]
+  }
+  
+  # try:
+  #   response = requests.post(URL+URI, headers=header, data=json.dumps(data))
+  #   print(response.text)
+  # except requests.exceptions.HTTPError as e:
+  #   print('HTTP 에러 발생', e)
+  #   print('응답 상태 코드:', response.status_code)
+  #   print("응답 본문", response.text)
+  #   return JSONResponse(status_code=response.status_code, content={'success':False, 'message': response.text})
+  # except requests.exceptions.RequestException as e:
+  #   print(e)
+  #   return JSONResponse(status_code=400, content={'success': False, 'message' : '인증번호 인증 실패'})
+  
+  return JSONResponse(status_code=200, content={'success': True, 'message' : '휴대폰번호 검증 완료'})
 
 
 # 유저 전체 리스트 조회 API
@@ -234,7 +318,8 @@ async def read_users(db: Session = Depends(get_db)):
             uid=user.uid,
             std_id=user.std_id,
             name=user.name,
-            email=user.email,
+            phone_number=user.phone_number,
+            # email=user.email,
             password=user.password,
             school=user.school,
             sign_url=user.sign_url,
@@ -279,7 +364,8 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
     uid=user.uid,
     std_id=user.std_id,
     name=user.name,
-    email=user.email,
+    # email=user.email,
+    phone_number=user.phone_number,
     password=user.password,
     school=user.school,
     sign_url=user.sign_url,
@@ -318,7 +404,8 @@ async def read_user(std_id: str, db: Session = Depends(get_db)):
     uid=user.uid,
     std_id=user.std_id,
     name=user.name,
-    email=user.email,
+    phone_number=user.phone_number,
+    # email=user.email,
     password=user.password,
     school=user.school,
     sign_url=user.sign_url,
