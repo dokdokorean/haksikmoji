@@ -65,6 +65,7 @@ class StoreNoticeSchema(BaseModel):
   id: int
   title: str
   content: str
+  is_pinned: bool
   created_at: Optional[datetime] = None
   updated_at: Optional[datetime] = None
 

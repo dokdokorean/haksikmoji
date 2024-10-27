@@ -137,7 +137,8 @@ async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
       'category_name': category.category_name,
       'menus': menus
     })
-    
+  
+  sorted_notices = sorted(store.store_notice, key=lambda notice: (notice.is_pinned, notice.created_at), reverse=True)
   
   result_store = {
     'sid': store.sid,
@@ -148,7 +149,7 @@ async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
     'store_img_url': store.store_img_url,
     'category': store.category,
     'store_hours': store_hours_dict,
-    'store_notice': store.store_notice,
+    'store_notice': sorted_notices,
     'menu': categories
   }
   
