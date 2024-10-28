@@ -247,28 +247,28 @@ async def verification_phone(phone_number: str ,db: Session = Depends(get_db)):
   if existing_user:
     raise HTTPException(status_code=400, detail="이미 인증된 전화번호가 있습니다.")
   
-  signature = makeSignature()
+  # signature = makeSignature()
   
-  print(signature)
+  # print(signature)
   
-  header={
-    "Content-Type" : "application/json",
-    'x-ncp-apigw-timestamp' : timestamp,
-    'x-ncp-iam-access-key' : NAVER_CLOUD_ACCESS_KEY,
-    'x-ncp-apigw-signature-v2' : signature,
-  }
+  # header={
+  #   "Content-Type" : "application/json",
+  #   'x-ncp-apigw-timestamp' : timestamp,
+  #   'x-ncp-iam-access-key' : NAVER_CLOUD_ACCESS_KEY,
+  #   'x-ncp-apigw-signature-v2' : signature,
+  # }
   
-  data={
-    "type" : "SNS",
-    "from" : "",
-    "subject" : "학식모지 인증번호 테스트",
-    "content" : "[인증번호] 1234",
-    "messages" : [
-      {
-        "to": phone_number,
-      }
-    ]
-  }
+  # data={
+  #   "type" : "SNS",
+  #   "from" : "",
+  #   "subject" : "학식모지 인증번호 테스트",
+  #   "content" : "[인증번호] 1234",
+  #   "messages" : [
+  #     {
+  #       "to": phone_number,
+  #     }
+  #   ]
+  # }
   
   # try:
   #   response = requests.post(URL+URI, headers=header, data=json.dumps(data))
