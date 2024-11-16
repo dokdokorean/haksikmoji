@@ -9,4 +9,5 @@ venv/
 
 # static folder
 static
-images
+images/common
+images/*

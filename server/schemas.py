@@ -137,6 +137,7 @@ class UserSchema(BaseModel):
   phone_number: str
   # email: EmailStr
   password: str
+  marketing_term: bool
   school: SchoolSchema
   sign_url: Optional[str] = None
   created_at: Optional[datetime] = None
