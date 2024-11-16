@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from server.routes.__init__ import router
 from server.scheduler.update_store_status_scheduler import start_scheduler
 import threading
+import uvicorn
 
 from datetime import datetime, time
 import pytz
@@ -52,5 +53,4 @@ def start_background_scheduler():
 if __name__ == '__main__':
   start_background_scheduler()
   
-  import uvicorn
-  uvicorn.run(app, host="0.0.0.0", port=8080, reload=True)
+  uvicorn.run(app, host="0.0.0.0", port=8080, reload=True, proxy_headers=True)

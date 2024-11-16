@@ -8,5 +8,5 @@ venv/
 .env
 
 # static folder
-static/signatures/
+static
 images
