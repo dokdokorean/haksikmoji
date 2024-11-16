@@ -1,18 +1,32 @@
-from fastapi import FastAPI
+from typing import Annotated
+from fastapi import FastAPI, Request, HTTPException, Depends, status
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 from server.routes.__init__ import router
 from server.scheduler.update_store_status_scheduler import start_scheduler
+from dotenv import load_dotenv
 import threading
+import os
 
 from datetime import datetime, time
 import pytz
+
+load_dotenv()
+
+SWAGGER_USERNAME = os.getenv('SWAGGER_USERNAME')
+SWAGGER_PASSWORD = os.getenv('SWAGGER_PASSWORD')
 
 def get_skt_time():
   kst = pytz.timezone('Asia/Seoul')
   return datetime.now(kst)
 
 app = FastAPI(
+  docs_url=None, 
+  redoc_url=None,
+  openapi_url=None,
   openapi_tags=[
     {
       "name": "학식 API",
@@ -28,6 +42,35 @@ app = FastAPI(
     }
   ]
 )
+
+security = HTTPBasic()
+
+def authenticate_user(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+  if (
+    credentials.username != SWAGGER_USERNAME
+    or credentials.password != SWAGGER_PASSWORD
+  ):
+    raise HTTPException(
+      status_code=status.HTTP_401_UNAUTHORIZED,
+      detail="Incorrect Credentials",
+      headers={"WWW-Authenticate_user": "Basic"},
+    )
+
+@app.get("/docs", include_in_schema=False)
+async def get_docs(credentials: Annotated[HTTPBasicCredentials, Depends(authenticate_user)],):
+  return get_swagger_ui_html(openapi_url="/openapi.json", title="Swagger UI")
+
+@app.get("/redoc", include_in_schema=False)
+async def get_redocs(credentials: Annotated[HTTPBasicCredentials, Depends(authenticate_user)],):
+  return get_redoc_html(openapi_url="/openapi.json", title="ReDoc")
+
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint(credentials: Annotated[HTTPBasicCredentials, Depends(authenticate_user)],):
+  return get_openapi(
+      title="FastAPI with Private Swagger",
+      version="0.1.0",
+      routes=app.routes,
+  )
 
 # CORS 설정
 app.add_middleware(
