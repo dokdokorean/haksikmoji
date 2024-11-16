@@ -157,6 +157,7 @@ class UserCreateSchema(BaseModel):
   # email: EmailStr
   password: str
   school_id: int
+  marketing_term: bool
   sign_url: str = None # 선택적으로 받을 수 있는 필드
   
 class UserLoginSchema(BaseModel):

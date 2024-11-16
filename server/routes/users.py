@@ -42,7 +42,6 @@ users_router = APIRouter(
 )
 
 
-
 def makeSignature():
   access_key=NAVER_CLOUD_ACCESS_KEY
   secret_key=NAVER_CLOUD_SECRET_KEY
@@ -59,99 +58,6 @@ def makeSignature():
   signingKey = base64.b64encode(hmac.new(secret_key, message, digestmod=hashlib.sha256).digest())
   return signingKey
   
-
-# # 이메일 검증 API
-# @users_router.post('/valid-email', summary="이메일을 통한 검증 및 인증코드 발송")
-# async def check_email(inputData: VerifyEmail, db: Session = Depends(get_db)):
-
-
-#   existing_user = db.query(User).filter(User.email == inputData.email).first()
-#   if existing_user:
-#     raise HTTPException(status_code=400, detail="중복된 이메일입니다.")
-  
-  
-#   headers={
-#     "Content-Type" : "application/json"
-#   }
-  
-#   school = db.query(School).filter(School.id == inputData.school_id).first()
-  
-#   if inputData.verify_code is None:
-#     # 인증 코드 발송
-#     payload={
-#       "key" : UNIVCERT_API_KEY,
-#       "email" : inputData.email,
-#       "univName" : f"{school.name}학교",
-#       "univ_check" : True
-#     }
-    
-#     try:
-#       response = requests.post(f"{univcert_url}/certify", json=payload, headers=headers)
-      
-#       api_response = response.json()
-      
-#       if api_response.get('success') == True:
-#         return JSONResponse(status_code=200, content={'success' : True, 'message' : '인증 메일이 발송되었습니다.'})
-#       else:
-#         return JSONResponse(status_code=400, content={'success' : False, 'message': api_response.get('message')})
-      
-#     except requests.exceptions.RequestException as e:
-#       return JSONResponse(status_code=400, content={'success' : False, 'message' : e})
-  
-#   else:
-#     # 인증 코드 검증
-#     payload={
-#       "key" : UNIVCERT_API_KEY,
-#       "email" : inputData.email,
-#       "univName" : f"{school.name}학교",
-#       "code" : inputData.verify_code
-#     }
-    
-#     try:
-#       response = requests.post(f"{univcert_url}/certifycode", json=payload, headers=headers)
-      
-#       api_response = response.json()
-#       print(api_response)
-      
-#       if api_response.get('success') == True:
-#         return JSONResponse(status_code=200, content={'success' : True, 'message' : '인증 완료'})
-#       else:
-#         return JSONResponse(status_code=400, content={'success' : False, 'message' : api_response.get('message')})
-      
-#     except requests.exceptions.RequestException as e:
-#       return JSONResponse(status_code=400, content={'success' : False, 'message' : e})
-    
-# @users_router.get('/valid-email/list', summary="검증된 이메일 리스트 조회")
-# async def get_valid_email():
-#   headers={
-#     "Content-Type" : "application/json"
-#   }
-#   # 인증된 유저 목록 초기화
-#   payload={
-#     "key" : UNIVCERT_API_KEY,
-#   }
-  
-#   response=requests.post(f"{univcert_url}/certifiedlist", json=payload, headers=headers)
-#   api_response = response.json()
-  
-#   return JSONResponse(status_code=200, content={'success': True, 'message' : '목록 조회 완료', 'body': api_response})
-  
-
-# @users_router.post('/valid-email/reset', summary="검증된 이메일 초기화")
-# async def reset_verify():
-#   headers={
-#     "Content-Type" : "application/json"
-#   }
-#   # 인증된 유저 목록 초기화
-#   payload={
-#     "key" : UNIVCERT_API_KEY,
-#   }
-#   response=requests.post(f"{univcert_url}/clear", json=payload, headers=headers)
-  
-#   if response.json().get('success') == True:
-#     return JSONResponse(status_code=200, content={'success': True, 'message' : '목록 초기화 완료'})
-#   else:
-#     return JSONResponse(status_code=400, content={'success': False, 'message' : '목록 초기화 실패'})
     
 # 유저 로그인 API
 @users_router.post('/signin', summary="유저 로그인 기능")
@@ -179,7 +85,7 @@ async def login_user(login_data: UserLoginSchema, db: Session = Depends(get_db))
   return response
 
 # 유저 생성 API
-@users_router.post('/register', response_model=UserCreateSchema, summary="유저 회원가입 기능")
+@users_router.post('/register', summary="유저 회원가입 기능")
 async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)):
   existing_user = db.query(User).filter(User.std_id == createData.std_id).first()
   if existing_user:
@@ -200,13 +106,14 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
       
       # 파일 이름 생성 및 파일 경로 지정
       file_name = f"{createData.std_id}_sign.png"
-      file_path = os.path.join("server","static", "signatures", file_name)
+      file_path = os.path.join("server","static", str(createData.school_id),"signatures", file_name)
+      os.makedirs(os.path.dirname(file_path), exist_ok=True)
       
       # 이미지 데이터를 파일로 저장
       with open(file_path, "wb") as f:
         f.write(sign_image_data)
       
-      sign_url_data = f"/server/static/signatures/{file_name}"
+      sign_url_data = f"/server/static/{str(createData.school_id)}/signatures/{file_name}"
     except Exception as e:
       raise HTTPException(status_code=500, detail="사인을 등록하지 못하였습니다")
 
@@ -222,6 +129,7 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
     password=hashed_password,
     school_id=createData.school_id,
     sign_url=sign_url_data,
+    marketing_term=createData.marketing_term,
     created_at=get_skt_time(),
     role=1,
   )
@@ -333,7 +241,7 @@ async def read_users(db: Session = Depends(get_db)):
         user_list.append(user_data)
 
     return user_list
-  # return JSONResponse(status_code=200, content={'success' : True, 'message' : '유저들 조회 완료', 'body' : userList})
+# return JSONResponse(status_code=200, content={'success' : True, 'message' : '유저들 조회 완료', 'body' : userList})
 #   #'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object>는 SQLAlchemy ORM 객체를 그대로 출력하거나 JSON으로 변환하려고 할 대, 자동으로 추가하여 내부상태도 함께 출력됨.
 #   # SQLAlchemy 모델 객체를 Pydantic모델로 변환해야함
 
@@ -341,6 +249,7 @@ async def read_users(db: Session = Depends(get_db)):
 # 현재 로그인 된 유저 정보 조회
 @users_router.get('/me', response_model=UserSchema, summary="현재 로그인 된 유저 조회")
 async def read_current_user(db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+  
   # std_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()
 
@@ -376,6 +285,69 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
   )
 
   return user_data
+
+@users_router.put('/me/password', summary="현재 로그인된 유저 비밀번호 수정")
+async def update_password(current_paassword: str, new_password: str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+  
+  # std_id에 해당하는 유저를 조회
+  user = db.query(User).filter(User.uid == token.uid).first()
+  
+  # 현재 로그인 된 유저 조회
+  if not user:
+    raise HTTPException(status_code=404, detail="로그인 유저를 찾을 수 없습니다.")
+  
+  # 현재 비밀번호가 맞는지 검증
+  if not pwd_context.verify(current_paassword, user.password):
+    raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다")
+  
+  # 새로운 비밀번호와 기존 비밀번호가 동일하면 예외처리
+  if pwd_context.verify(new_password, user.password):
+    raise HTTPException(status_code=400, detail="새로운 비밀번호는 기존 비밀번호와 동일할 수 없습니다.")
+  
+  hashed_password = pwd_context.hash(new_password)
+  user.password = hashed_password
+  
+  db.commit()
+  db.refresh(user)
+  
+  return JSONResponse(status_code=200, content={'success': True, 'message': '비밀번호 수정 완료'})
+
+@users_router.put('/me/sign', summary="현재 로그인된 유저 사인 수정")
+async def update_sign(sign_url: str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+  
+  # std_id에 해당하는 유저를 조회
+  user = db.query(User).filter(User.uid == token.uid).first()
+  
+  # 현재 로그인 된 유저 조회
+  if not user:
+    raise HTTPException(status_code=404, detail="로그인 유저를 찾을 수 없습니다.")
+  
+  # 사인 데이터 처리
+  try:
+    # Base64 인코딩 부분을 추출 및 디코딩
+    sign_data = sign_url.split(",")[1]
+    sign_image_data = base64.b64decode(sign_data)
+    
+    # 파일 이름 생성 및 파일 경로 지정
+    file_name = f"{user.std_id}_sign.png"
+    file_path = os.path.join("server","static", str(user.school.id),"signatures", file_name)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # 이미지 데이터를 파일로 저장
+    with open(file_path, "wb") as f:
+      f.write(sign_image_data)
+    
+    sign_url_data = f"/server/static/{str(user.school.id)}/signatures/{file_name}"
+  except Exception as e:
+    raise HTTPException(status_code=500, detail="사인을 등록하지 못하였습니다")
+  
+  
+  user.sign_url = sign_url_data
+  
+  db.commit()
+  db.refresh(user)
+  
+  return JSONResponse(status_code=200, content={'success': True, 'message': '사인 수정 완료'})
 
 
 
@@ -416,24 +388,7 @@ async def read_user(std_id: str, db: Session = Depends(get_db)):
 
   return user_data
 
-# @users_router.put('', response_model=UserSchema, summary="학번을 통한 유저의 email과 sign 정보 수정")
-# async def update_user(std_id: str, email:EmailStr, sign_url: str, db: Session = Depends(get_db)):
-#   # std_id에 해당하는 유저를 조회
-#   user = db.query(User).filter(User.std_id == std_id).first()
-  
-#   if not user:
-#     raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
-  
-#   # 유저 정보 업데이트
-#   user.email = email
-#   user.sign_url = sign_url
-  
-#   db.commit()
-#   db.refresh(user)
-  
-#   return JSONResponse(status_code=200, content={'success': True, 'message': '유저 정보 업데이트'})
-
-@users_router.delete('', summary="학번을 통한 유저 삭제")
+@users_router.delete('', summary="현재 로그인 된 유저 삭제")
 async def delete_user(db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   # user_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()

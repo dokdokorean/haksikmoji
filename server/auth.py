@@ -23,7 +23,7 @@ def create_jwt_token(user):
   payload = {
     "uid": user.uid,
     "std_id": user.std_id,
-    "exp": get_skt_time() + timedelta(hours=1)  # 토큰 유효 기간 설정 (1시간)
+    "exp": get_skt_time() + timedelta(days=60)  # 토큰 유효 기간 설정 (1시간)
   }
   
   token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

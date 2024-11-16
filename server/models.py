@@ -134,8 +134,8 @@ class User(Base):
   # email = Column(String(30), nullable=False)
   password = Column(String(500), nullable=False)
   school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
+  marketing_term = Column(Boolean, default=False, nullable=False)
   school = relationship('School')
-  
   sign_url = Column(String(3000))
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
   role = Column(Integer, nullable=False)
