@@ -5,6 +5,7 @@ import hmac
 import hashlib
 import re
 import json
+import certifi
 from server.auth import create_jwt_token
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -409,40 +410,21 @@ async def delete_user(db: Session = Depends(get_db), token: str = Depends(verify
 
   return JSONResponse(status_code=200, content={'success': True, 'message': '유저 삭제'})
 
-@users_router.post('/userValidationTest', summary="카카오톡 인증 API 연동")
+@users_router.post('/stdIdValidationTest', summary="학번 인증 API")
 async def validation_user(text: str):
   
   headers = {
-    # 'Authorization' : f'Bearer {KAKAO_ACCESS_TOKEN}',
     'Content-Type' : 'application/json'
   }
   
+  params = {
+    'uid' : text
+  }
+  
   try:
-    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp?uid={text}', headers=headers)
-    print(response)
-  except:
-    print('실패')
-  
-  # headers= {
-  #   'Authorization' : f'Bearer {KAKAO_ACCESS_TOKEN}',
-  #   'Content-Type' : 'application/x-www-form-urlencoded;charset=utf-8'
-  # }
-  
-  # payloads= {
-  #   'template_object' : {
-  #     "object_type" : "text",
-  #     "text" : "ㅋㅋ",
-  #     "link": {
-  #       "web_url": "https://developers.kakao.com",
-  #       "mobile_web_url": "https://developers.kakao.com"
-  #     },
-  #   }
-  # }
-  
-  # try:
-  #   response = requests.post('https://kapi.kakao.com/v2/api/talk/memo/default/send', headers=headers, data=json.dumps(payloads))
-  #   print(response.text)
-  # except:
-  #   print('실패')
+    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp', headers=headers, params=params, verify=False)
+    print(response.text)
+  except Exception as e:
+    print(f'실패: {e}')
   
   return {'message' : text}
