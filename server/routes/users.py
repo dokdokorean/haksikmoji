@@ -395,7 +395,7 @@ async def read_user(std_id: str, db: Session = Depends(get_db)):
   return user_data
 
 @users_router.delete('', summary="현재 로그인 된 유저 삭제")
-async def delete_user(db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   # user_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()
   
@@ -403,46 +403,30 @@ async def delete_user(db: Session = Depends(get_db), token: str = Depends(verify
   if not user:
     raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
   
-  # 유저 삭제
-  db.delete(user)
-  db.commit()
+  if pwd_context.verify(pw, user.password):
+    db.delete(user)
+    db.commit()
+  else:
+    raise HTTPException(status_code=404, detail="비밀번호가 틀렸습니다!")
 
   return JSONResponse(status_code=200, content={'success': True, 'message': '유저 삭제'})
 
-@users_router.post('/userValidationTest', summary="카카오톡 인증 API 연동")
+@users_router.post('/stdIdValidationTest', summary="학번 인증 API")
 async def validation_user(text: str):
   
   headers = {
-    # 'Authorization' : f'Bearer {KAKAO_ACCESS_TOKEN}',
     'Content-Type' : 'application/json'
   }
   
+  params = {
+    'uid' : text
+  }
+  
   try:
-    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp?uid={text}', headers=headers)
-    print(response)
-  except:
-    print('실패')
+    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp', headers=headers, params=params, verify=False)
+    print(response.text)
+  except Exception as e:
+    print(f'실패: {e}')
+    raise HTTPException(status_code=500, detail="유저 정보 조회 불가능")
   
-  # headers= {
-  #   'Authorization' : f'Bearer {KAKAO_ACCESS_TOKEN}',
-  #   'Content-Type' : 'application/x-www-form-urlencoded;charset=utf-8'
-  # }
-  
-  # payloads= {
-  #   'template_object' : {
-  #     "object_type" : "text",
-  #     "text" : "ㅋㅋ",
-  #     "link": {
-  #       "web_url": "https://developers.kakao.com",
-  #       "mobile_web_url": "https://developers.kakao.com"
-  #     },
-  #   }
-  # }
-  
-  # try:
-  #   response = requests.post('https://kapi.kakao.com/v2/api/talk/memo/default/send', headers=headers, data=json.dumps(payloads))
-  #   print(response.text)
-  # except:
-  #   print('실패')
-  
-  return {'message' : text}
+  return {'message' : response}
