@@ -114,10 +114,10 @@ class Store(Base):
 class UserFavoriteStore(Base):
   __tablename__ = 'user_favorite_store'
   
-  uid = Column(Integer, ForeignKey('user.uid'), primary_key=True)
-  store_id = Column(Integer, ForeignKey('store.sid'), primary_key=True)
+  uid = Column(Integer, ForeignKey('user.uid', ondelete="CASCADE"), primary_key=True)
+  store_id = Column(Integer, ForeignKey('store.sid', ondelete="CASCADE"), primary_key=True)
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
-
+  
   # 관계 설정
   user = relationship('User', back_populates='favorite_stores')
   store = relationship('Store', back_populates='favorited_by_users')
@@ -144,7 +144,11 @@ class User(Base):
   store = relationship("Store", back_populates="users")
   
   # 즐겨찾기한 매장과의 관계 설정
-  favorite_stores = relationship('UserFavoriteStore', back_populates='user')
+  favorite_stores = relationship(
+    'UserFavoriteStore', 
+    cascade="all, delete-orphan", 
+    back_populates='user'
+  )
 
 
 # class Cafeteria(Base):
