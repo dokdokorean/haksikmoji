@@ -15,6 +15,11 @@ async def get_main_adbanner():
       'id': 1,
       'imageUrl': '/images/advertisement/main/banner/ad-1.png',
       'path': 'https://veil-value-ae4.notion.site/7a20e6e093d94887a4b438fb3ec5c9e1',
+    },
+    {
+      'id': 2,
+      'imageUrl': '/images/advertisement/main/banner/ad-2.png',
+      'path': 'https://veil-value-ae4.notion.site/7a20e6e093d94887a4b438fb3ec5c9e1',
     }
   ]
   

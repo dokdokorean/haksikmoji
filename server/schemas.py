@@ -151,6 +151,9 @@ class UserSchema(BaseModel):
     from_attributes = True # 기존 orm_mode
 
 
+class UserSignSchema(BaseModel):
+  sign_url: str
+
 class UserCreateSchema(BaseModel):
   std_id: str
   name: str
@@ -164,6 +167,9 @@ class UserCreateSchema(BaseModel):
 class UserLoginSchema(BaseModel):
   std_id: str
   password: str
+  
+class UserStdSchema(BaseModel):
+  std_id: str
   
 # class VerifyEmail(BaseModel):
 #   email: EmailStr

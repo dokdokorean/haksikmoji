@@ -15,7 +15,7 @@ from passlib.context import CryptContext
 from server.models import User, UserFavoriteStore, Store
 # from server.models import User, School
 # from server.models import get_skt_time
-from server.schemas import UserSchema, UserLoginSchema, StoreListSchema, UserCreateSchema
+from server.schemas import UserSchema, UserLoginSchema, StoreListSchema, UserCreateSchema, UserSignSchema, UserStdSchema
 from server.db import get_db
 from server.auth import verify_jwt_token
 from server.utils import get_skt_time
@@ -319,7 +319,7 @@ async def update_password(current_paassword: str, new_password: str, db: Session
   return JSONResponse(status_code=200, content={'success': True, 'message': '비밀번호 수정 완료'})
 
 @users_router.put('/me/sign', summary="현재 로그인된 유저 사인 수정")
-async def update_sign(sign_url: str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
   # std_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()
@@ -331,7 +331,7 @@ async def update_sign(sign_url: str, db: Session = Depends(get_db), token: str =
   # 사인 데이터 처리
   try:
     # Base64 인코딩 부분을 추출 및 디코딩
-    sign_data = sign_url.split(",")[1]
+    sign_data = sign_update_url.sign_url.split(",")[1]
     sign_image_data = base64.b64decode(sign_data)
     
     # 파일 이름 생성 및 파일 경로 지정
@@ -412,22 +412,30 @@ async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depend
 
   return JSONResponse(status_code=200, content={'success': True, 'message': '유저 삭제'})
 
-@users_router.post('/stdIdValidationTest', summary="학번 인증 API")
-async def validation_user(text: str):
+@users_router.post('/stdIdValidation', summary="학번 인증 API")
+async def validation_student(input_data: UserStdSchema):
   
   headers = {
     'Content-Type' : 'application/json'
   }
   
   params = {
-    'uid' : text
+    'uid' : input_data.std_id
   }
   
   try:
-    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp', headers=headers, params=params, verify=False)
-    print(response.text)
+    response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp', headers=headers, params=params, verify=True)
+    
+    if response.status_code != 200:
+      raise HTTPException(status_code=500, detail=f"요청 실패: {response.status_code}")
+    
+    student_state = response.json()
+    
+    if not student_state.get('name'):
+      return JSONResponse(status_code=200, content={'success': False, 'body': student_state, 'message': '교내에 존재하지 않는 사용자'})
+    
   except Exception as e:
-    print(f'실패: {e}')
+    print(f'서버 오류: {e}')
     raise HTTPException(status_code=500, detail="유저 정보 조회 불가능")
   
-  return {'message' : response}
+  return JSONResponse(status_code=200, content={'success': True, 'body': student_state})
