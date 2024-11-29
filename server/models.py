@@ -17,6 +17,45 @@ class School(Base):
   name = Column(String(50), nullable=False)
   campus = Column(String(50), nullable=False)
 
+class DayOfWeek(Base):
+  __tablename__ = 'day_of_week'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(Enum('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'))
+
+# 학식
+class MealType(Base):
+  __tablename__ = 'meal_type'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  type = Column(Enum('breakfast', 'lunch'), nullable=False)
+
+class Cafeteria(Base):
+  __tablename__ = 'cafeteria'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(String(100), nullable=False)
+  school_id = Column(Integer, ForeignKey('school.id'),nullable=False)
+  school = relationship('School')
+
+class CafeteriaMenu(Base):
+  __tablename__ = 'cafeteria_menu'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  cafeteria_id = Column(Integer, ForeignKey('cafeteria.id'), nullable=False)
+  cafeteria = relationship('Cafeteria')
+  day_id = Column(Integer, ForeignKey('day_of_week.id'), nullable=False)
+  day_of_week = relationship('DayOfWeek')
+  menu_id = Column(Integer, ForeignKey('haksik_menu.id'), nullable=False)
+  menu = relationship('HaksikMenu')
+  meal_id = Column(Integer, ForeignKey('meal_type.id'), nullable=False)
+  meal = relationship('MealType')
+
+class HaksikMenu(Base):
+  __tablename__ = 'haksik_menu'
+  
+  id = Column(Integer, primary_key=True, autoincrement=True)
+  name = Column(String(200), nullable=True)
 
 # 매장 카테고리
 class StoreCategory(Base):
@@ -26,11 +65,6 @@ class StoreCategory(Base):
   main_category = Column(String(50), nullable=False)
   sub_category = Column(String(50))
   
-class DayOfWeek(Base):
-  __tablename__ = 'day_of_week'
-  
-  id = Column(Integer, primary_key=True, autoincrement=True)
-  name = Column(Enum('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'))
 
 # 매장 운영 및 쉬는시간
 class StoreHours(Base):
@@ -65,7 +99,8 @@ class Store(Base):
   store_number = Column(String(255), nullable=True)
   store_location = Column(String(200), nullable=True)
   is_open = Column(Enum('opened', 'closed', 'breaktime'), nullable=True)
-  store_img_url = Column(String(3000), nullable=True)
+  store_thumb_url = Column(String(3000), nullable=True)
+  store_banner_url = Column(String(3000), nullable=True)
   school_id = Column(Integer, ForeignKey('school.id'))
   school = relationship(School)
   category_id = Column(Integer, ForeignKey('category.id'))
@@ -149,15 +184,6 @@ class User(Base):
     cascade="all, delete-orphan", 
     back_populates='user'
   )
-
-
-# class Cafeteria(Base):
-#   __tablename__ = 'cafeteria'
-  
-#   id = Column(Integer, primary_key=True, autoincrement=True)
-#   name = Column(String(100), nullable=False)
-#   school_id = Column(Integer, ForeignKey('school.id'),nullable=False)
-#   school = relationship('School')
 
 # 매장 메뉴
 class Menu(Base):

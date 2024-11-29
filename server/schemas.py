@@ -76,7 +76,8 @@ class StoreListSchema(BaseModel):
   store_number: Optional[str] = None
   store_location: Optional[str] = None
   is_open: Optional[str] = None
-  store_img_url: Optional[str] = None
+  store_thumb_url: Optional[str] = None
+  store_banner_url: Optional[str] = None
   category: StoreCategorySchema
 
 # 매장 검색 Schema
@@ -176,11 +177,19 @@ class UserStdSchema(BaseModel):
 #   school_id: int
 #   verify_code: str = None
 
-# class Cafeteria(BaseModel):
-#   id: int
-#   name: str
-#   school: SchoolSchema
+class CafeteriaSchema(BaseModel):
+  id: int
+  name: str
+  school: SchoolSchema
 
+class CafeteriaMenuSchema(BaseModel):
+  id:int
+  cafeteria_id: int
+  # cafeteria: Optional[CafeteriaSchema] = None
+  day_id: int
+  # day_of_week: DayOfWeekSchema
+  menu_id: int
+  meal_id: int
 
 
 # # Store 관련
