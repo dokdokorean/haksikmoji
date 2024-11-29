@@ -34,6 +34,12 @@ NOTIFICATION_SERVICE_ID = os.getenv('NOTIFICATION_SERVICE_ID')
 KAKAO_ACCESS_TOKEN = os.getenv('KAKAO_ACCESS_TOKEN')
 YONSEI_AUTH_URL = os.getenv('YONSEI_AUTH_URL')
 
+INFO_BANK_URL=os.getenv('INFO_BANK_URL')
+INFO_BANK_TEMPLATE_CODE=os.getenv('INFO_BANK_TEMPLATE_CODE')
+INFO_BANK_SENDER_KEY=os.getenv('INFO_BANK_SENDER_KEY')
+
+INFO_BANK_IB_ID=os.getenv('INFO_BANK_IB_ID')
+INFO_BANK_IB_PW=os.getenv('INFO_BANK_IB_PW')
 
 URL = "https://sens.apigw.ntruss.com"
 URI = f"/sms/v2/services/{NOTIFICATION_SERVICE_ID}/messages"
@@ -44,7 +50,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 users_router = APIRouter(
   prefix="/v1/users"
 )
-
 
 def makeSignature():
   access_key=NAVER_CLOUD_ACCESS_KEY
@@ -159,43 +164,57 @@ async def verification_phone(phone_number: str ,db: Session = Depends(get_db)):
   if existing_user:
     raise HTTPException(status_code=400, detail="이미 인증된 전화번호가 있습니다.")
   
-  # signature = makeSignature()
+  token_payload={}
+  token_headers={
+    'X-IB-Client-Id' : INFO_BANK_IB_ID,
+    'X-IB-Client-Passwd' : INFO_BANK_IB_PW,
+    'Accept' : 'application/json'
+  }
   
-  # print(signature)
   
-  # header={
-  #   "Content-Type" : "application/json",
-  #   'x-ncp-apigw-timestamp' : timestamp,
-  #   'x-ncp-iam-access-key' : NAVER_CLOUD_ACCESS_KEY,
-  #   'x-ncp-apigw-signature-v2' : signature,
-  # }
-  
-  # data={
-  #   "type" : "SNS",
-  #   "from" : "",
-  #   "subject" : "학식모지 인증번호 테스트",
-  #   "content" : "[인증번호] 1234",
-  #   "messages" : [
-  #     {
-  #       "to": phone_number,
-  #     }
-  #   ]
-  # }
-  
-  # try:
-  #   response = requests.post(URL+URI, headers=header, data=json.dumps(data))
-  #   print(response.text)
-  # except requests.exceptions.HTTPError as e:
-  #   print('HTTP 에러 발생', e)
-  #   print('응답 상태 코드:', response.status_code)
-  #   print("응답 본문", response.text)
-  #   return JSONResponse(status_code=response.status_code, content={'success':False, 'message': response.text})
-  # except requests.exceptions.RequestException as e:
-  #   print(e)
-  #   return JSONResponse(status_code=400, content={'success': False, 'message' : '인증번호 인증 실패'})
-  
+  # 토큰 가져오기
+  try:
+    token_response = requests.post(f"{INFO_BANK_URL}/v1/auth/token", headers=token_headers, data=token_payload)
+    
+    token_response = token_response.json()
+    
+    if token_response.get('result') == 'Success':
+      token = token_response.get('data', {}).get('token')
+      schema = token_response.get('data', {}).get('schema')
+      
+      
+      alim_headers={
+        "Authorization" : f"{schema} {token}",
+        "Content-Type" : "application/json",
+        "Accept" : "application/json"
+      }
+      
+      alim_payload=json.dumps({
+        "senderKey" : INFO_BANK_SENDER_KEY,
+        "msgType" : "AT",
+        "to" : phone_number,
+        "templateCode" : INFO_BANK_TEMPLATE_CODE,
+        "text" : 
+          f"[학식모지] 본인확인을 위해 인증번호 [{123456}]를 입력해주세요."
+      })
+      
+      try:
+        alim_response = requests.post(f"{INFO_BANK_URL}/v1/send/alimtalk", headers=alim_headers, data=alim_payload)
+        
+        print(alim_response.text)
+        
+        
+      except:
+        print("error")
+        raise HTTPException(status_code=500, detail="서버오류로 인증번호를 보내지 못하였습니다. 다시 시도해주세요.")
+      
+      
+  except:
+    print("error")
+    raise HTTPException(status_code=500, detail="서버오류로 토큰을 발급하지 못하였습니다. 다시 시도해주세요.")
+    
+  # 인증번호도 함께 담아서 전송
   return JSONResponse(status_code=200, content={'success': True, 'message' : '휴대폰번호 검증 완료'})
-
 
 # 유저 전체 리스트 조회 API
 @users_router.get('', response_model=list[UserSchema], summary="가입된 유저들 리스트 조회")
@@ -220,7 +239,8 @@ async def read_users(db: Session = Depends(get_db)):
                     store_name=store.store_name,
                     store_number=store.store_number,
                     store_location=store.store_location,
-                    store_img_url=store.store_img_url,
+                    store_thumb_url=store.store_thumb_url, 
+                    store_banner_url=store.store_banner_url,
                     is_open=store.is_open,
                     category=store.category
                 ))
