@@ -271,7 +271,7 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
       store = db.query(Store).filter(Store.sid == favorite.store_id).first()
       
       if store:
-        favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_img_url=store.store_img_url, is_open=store.is_open, category=store.category))
+        favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_thumb_url=store.store_thumb_url, store_banner_url=store.store_banner_url, is_open=store.is_open, category=store.category))
 
   # UserSchema로 변환할 때 favorite_stores 필드에 매장 리스트 추가
   user_data = UserSchema(

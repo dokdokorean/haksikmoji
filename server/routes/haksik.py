@@ -29,7 +29,7 @@ async def get_haksik(db: Session = Depends(get_db)):
 
   # 데이터를 그룹화
   for menu in menus:
-      cafeteria_id = menu.cafeteria_id
+      cafeteria_id = int(menu.cafeteria_id)
       meal_type = menu.meal.type  # 'breakfast' 또는 'lunch'
       day_name = day_map[menu.day_id]  # 'MON', 'TUE' 등
       menu_name = menu.menu.name  # 실제 메뉴 이름
@@ -38,7 +38,7 @@ async def get_haksik(db: Session = Depends(get_db)):
       haksik_data[cafeteria_id]["menu"][meal_type][day_name].append(menu_name)
 
   haksik_data = dict(haksik_data)  # defaultdict를 일반 dict로 변환
-  return haksik_data
+  return JSONResponse(status_code=200, content={'success' : True, 'body' : haksik_data})
 
 @haksik_router.put('')
 async def update_haksik(data: dict = Body(...), db: Session = Depends(get_db)):
