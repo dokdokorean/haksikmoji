@@ -82,6 +82,7 @@ app.add_middleware(
 )
 
 app.mount("/images", StaticFiles(directory="server/images"), name="images")
+app.mount("/static", StaticFiles(directory="server/static"), name="static")
 
 app.include_router(router, prefix="/api")
 
