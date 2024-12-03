@@ -1,3 +1,4 @@
+import random
 import os
 import requests
 import base64
@@ -15,7 +16,7 @@ from passlib.context import CryptContext
 from server.models import User, UserFavoriteStore, Store
 # from server.models import User, School
 # from server.models import get_skt_time
-from server.schemas import UserSchema, UserLoginSchema, StoreListSchema, UserCreateSchema, UserSignSchema, UserStdSchema
+from server.schemas import UserSchema, UserLoginSchema, StoreListSchema, UserCreateSchema, UserSignSchema, UserStdSchema, VerifyPhoneNum
 from server.db import get_db
 from server.auth import verify_jwt_token
 from server.utils import get_skt_time
@@ -152,69 +153,69 @@ async def create_user(createData: UserCreateSchema,db: Session = Depends(get_db)
 
 # 유저 핸드폰 번호 중복검사 및 인증번호 검증
 @users_router.post('/verification', summary='유저 휴대폰번호 중복체크 및 인증번호 검증')
-async def verification_phone(phone_number: str ,db: Session = Depends(get_db)):
+async def verification_phone(input_data: VerifyPhoneNum ,db: Session = Depends(get_db)):
   
-  if not re.fullmatch(r"^010\d{8}$", phone_number):
+  if not re.fullmatch(r"^010\d{8}$", input_data.phone_number):
     raise HTTPException(status_code=400, detail="휴대폰 번호 형식이 올바르지 않습니다. 010으로 시작하는 11자리 번호를 입력하세요.")
   
   timestamp = int(time.time() * 1000)
   timestamp = str(timestamp)
   
-  existing_user = db.query(User).filter(User.phone_number == phone_number).first()
+  existing_user = db.query(User).filter(User.phone_number == input_data.phone_number).first()
   if existing_user:
     raise HTTPException(status_code=400, detail="이미 인증된 전화번호가 있습니다.")
   
-  # token_payload={}
-  # token_headers={
-  #   'X-IB-Client-Id' : INFO_BANK_IB_ID,
-  #   'X-IB-Client-Passwd' : INFO_BANK_IB_PW,
-  #   'Accept' : 'application/json'
-  # }
+  # 인증번호
+  verify_code = str(random.randint(0, 999999)).zfill(6)
   
+  token_payload={}
+  token_headers={
+    'X-IB-Client-Id' : INFO_BANK_IB_ID,
+    'X-IB-Client-Passwd' : INFO_BANK_IB_PW,
+    'Accept' : 'application/json'
+  }
   
-  # # 토큰 가져오기
-  # try:
-  #   token_response = requests.post(f"{INFO_BANK_URL}/v1/auth/token", headers=token_headers, data=token_payload)
+  # 토큰 가져오기
+  try:
+    token_response = requests.post(f"{INFO_BANK_URL}/v1/auth/token", headers=token_headers, data=token_payload)
     
-  #   token_response = token_response.json()
+    token_response = token_response.json()
     
-  #   if token_response.get('result') == 'Success':
-  #     token = token_response.get('data', {}).get('token')
-  #     schema = token_response.get('data', {}).get('schema')
+    if token_response.get('result') == 'Success':
+      token = token_response.get('data', {}).get('token')
+      schema = token_response.get('data', {}).get('schema')
       
       
-  #     alim_headers={
-  #       "Authorization" : f"{schema} {token}",
-  #       "Content-Type" : "application/json",
-  #       "Accept" : "application/json"
-  #     }
+      alim_headers={
+        "Authorization" : f"{schema} {token}",
+        "Content-Type" : "application/json",
+        "Accept" : "application/json"
+      }
       
-  #     alim_payload=json.dumps({
-  #       "senderKey" : INFO_BANK_SENDER_KEY,
-  #       "msgType" : "AT",
-  #       "to" : phone_number,
-  #       "templateCode" : INFO_BANK_TEMPLATE_CODE,
-  #       "text" : 
-  #         f"[학식모지] 본인확인을 위해 인증번호 [{123456}]를 입력해주세요."
-  #     })
+      alim_payload=json.dumps({
+        "senderKey" : INFO_BANK_SENDER_KEY,
+        "msgType" : "AT",
+        "to" : input_data.phone_number,
+        "templateCode" : INFO_BANK_TEMPLATE_CODE,
+        "text" : 
+          f"[학식모지] \n\n본인확인을 위해 인증번호 [{verify_code}]를 입력해주세요."
+      })
       
-  #     try:
-  #       alim_response = requests.post(f"{INFO_BANK_URL}/v1/send/alimtalk", headers=alim_headers, data=alim_payload)
+      try:
+        alim_response = requests.post(f"{INFO_BANK_URL}/v1/send/alimtalk", headers=alim_headers, data=alim_payload)
         
-  #       print(alim_response.text)
+        print(alim_response.text)
         
         
-  #     except:
-  #       print("error")
-  #       raise HTTPException(status_code=500, detail="서버오류로 인증번호를 보내지 못하였습니다. 다시 시도해주세요.")
-      
-      
-  # except:
-  #   print("error")
-  #   raise HTTPException(status_code=500, detail="서버오류로 토큰을 발급하지 못하였습니다. 다시 시도해주세요.")
+      except:
+        print("error")
+        raise HTTPException(status_code=500, detail="서버오류로 인증번호를 보내지 못하였습니다. 다시 시도해주세요.")
+  except:
+    print("error")
+    raise HTTPException(status_code=500, detail="서버오류로 토큰을 발급하지 못하였습니다. 다시 시도해주세요.")
     
   # 인증번호도 함께 담아서 전송
-  return JSONResponse(status_code=200, content={'success': True, 'message' : '휴대폰번호 검증 완료'})
+  return JSONResponse(status_code=200, content={'success': True, 'message' : '정상적으로 인증번호를 발송하였습니다!', 'body': verify_code})
 
 # 유저 전체 리스트 조회 API
 @users_router.get('', response_model=list[UserSchema], summary="가입된 유저들 리스트 조회")
