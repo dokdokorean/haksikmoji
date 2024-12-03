@@ -81,8 +81,8 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 HTTP 헤더 허용
 )
 
-app.mount("/images", StaticFiles(directory="server/images"), name="images")
-app.mount("/static", StaticFiles(directory="server/static"), name="static")
+app.mount("/images", StaticFiles(directory="server/images", html=True), name="images")
+app.mount("/static", StaticFiles(directory="server/static", html=True), name="static")
 
 app.include_router(router, prefix="/api")
 
