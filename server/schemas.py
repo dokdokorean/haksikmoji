@@ -177,6 +177,9 @@ class UserStdSchema(BaseModel):
 #   school_id: int
 #   verify_code: str = None
 
+class VerifyPhoneNum(BaseModel):
+  phone_number: str
+
 class CafeteriaSchema(BaseModel):
   id: int
   name: str
