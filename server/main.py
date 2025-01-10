@@ -1,3 +1,4 @@
+import uvicorn
 from typing import Annotated
 from fastapi import FastAPI, Request, HTTPException, Depends, status
 from fastapi.staticfiles import StaticFiles
@@ -5,11 +6,13 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from server.routes.__init__ import router
 from server.scheduler.update_store_status_scheduler import start_scheduler
 from dotenv import load_dotenv
 import threading
 import os
+from server.util.custom_exception import CustomHTTPException
 
 from datetime import datetime, time
 import pytz
@@ -19,6 +22,8 @@ load_dotenv()
 SWAGGER_USERNAME = os.getenv('SWAGGER_USERNAME')
 SWAGGER_PASSWORD = os.getenv('SWAGGER_PASSWORD')
 
+
+# TODO : 시간대가 한국과 일부 차이가 존재.. 수정해야함
 def get_skt_time():
   kst = pytz.timezone('Asia/Seoul')
   return datetime.now(kst)
@@ -85,6 +90,18 @@ app.mount("/images", StaticFiles(directory="server/images"), name="images")
 app.mount("/static", StaticFiles(directory="server/static"), name="static")
 
 app.include_router(router, prefix="/api")
+
+@app.exception_handler(CustomHTTPException)
+async def custom_http_exception_handler(request: Request, exc: CustomHTTPException):
+  return JSONResponse(
+    status_code=exc.status_code,
+    content={
+      "status": exc.status_code,
+      "isSuccess": False,
+      "message": exc.message,
+      "result": None
+    }
+  )
 
 @app.on_event('startup')
 def start_background_scheduler():

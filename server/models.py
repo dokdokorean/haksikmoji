@@ -163,20 +163,31 @@ class User(Base):
   __tablename__ = 'user' # 테이블 이름
   
   uid = Column(Integer, primary_key=True, autoincrement=True)
-  std_id = Column(String(30), nullable=False)
   name = Column(String(20), nullable=False)
-  phone_number = Column(String(50), nullable=False)
-  # email = Column(String(30), nullable=False)
-  password = Column(String(500), nullable=False)
-  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
-  marketing_term = Column(Boolean, default=False, nullable=False)
-  school = relationship('School')
-  sign_url = Column(String(3000))
+  user_id = Column(String(100), nullable=False)
+  user_pw = Column(String(500), nullable=False)
+  user_birth = Column(String(6), nullable=False)
+  std_id = Column(String(30), nullable=True)
+  email = Column(String(30), nullable=False)
+  major = Column(String(100), nullable=True)
+  gender = Column(String(2), nullable=False)
+  phone_number = Column(String(50), nullable=True)
+  marketing_term = Column(Boolean, default=False)
+  sign_url = Column(String(3000), nullable=True)
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
   role = Column(Integer, nullable=False)
   
+  # 사용자의 학교 및 관계
+  school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
+  school = relationship('School')
+  
+  # 사용자의 학교 인증 여부
+  is_school_verified = Column(Boolean, nullable=False, default=False)
+  
+  
   store_id = Column(Integer, ForeignKey('store.sid'))
   store = relationship("Store", back_populates="users")
+  
   
   # 즐겨찾기한 매장과의 관계 설정
   favorite_stores = relationship(

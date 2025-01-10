@@ -15,6 +15,8 @@ store_router = APIRouter(
   prefix="/v1/store"
 )
 
+
+# 전체 매장 조회 API
 @store_router.get('', response_model=list[StoreListSchema],summary="전체 매장 조회")
 async def get_store_all(db: Session = Depends(get_db)):
   
@@ -43,6 +45,7 @@ async def search_keyword_store(query: str, db: Session = Depends(get_db), limit:
 
   return stores
 
+# 매장 키워드 검색하여 매장 조회
 @store_router.get('/search', response_model=list[StoreListSchema], summary="검색한 매장 조회")
 async def search_keyword_store(query: str, db: Session = Depends(get_db)):
   
@@ -63,8 +66,7 @@ async def search_keyword_store(query: str, db: Session = Depends(get_db)):
 
   return stores
 
-
-# 음식점 매장 조회
+# 음식점 카테고라 매장 조회
 @store_router.get('/food', response_model=list[StoreListSchema], summary="음식점 매장 조회")
 async def get_cafe_store_list(db: Session = Depends(get_db)):
   # 연세대 미래
@@ -72,7 +74,7 @@ async def get_cafe_store_list(db: Session = Depends(get_db)):
     
   return store_list
 
-# 카페 매장 조회
+# 카페 카테고리 매장 조회
 @store_router.get('/cafe', response_model=list[StoreListSchema], summary="카페 매장 조회")
 async def get_cafe_store_list(db: Session = Depends(get_db)):
   # 연세대 미래
@@ -80,7 +82,7 @@ async def get_cafe_store_list(db: Session = Depends(get_db)):
     
   return store_list
 
-# 편의점 매장 조회
+# 편의점 카테고리 매장 조회
 @store_router.get('/convenience', response_model=list[StoreListSchema], summary="편의점 매장 조회")
 async def get_con_store_list(db: Session = Depends(get_db)):
   # 연세대 미래
@@ -88,7 +90,7 @@ async def get_con_store_list(db: Session = Depends(get_db)):
     
   return store_list
 
-# 편의시설 매장 조회
+# 편의시설 카테고리 매장 조회
 @store_router.get('/facilities', response_model=list[StoreListSchema], summary="편의시설 매장 조회")
 async def get_con_store_list(db: Session = Depends(get_db)):
   # 연세대 미래
@@ -96,7 +98,7 @@ async def get_con_store_list(db: Session = Depends(get_db)):
     
   return store_list
 
-
+# 매장 id로 상세정보 조회
 @store_router.get('/{store_id}', response_model=StoreDetailSchema, summary="매장 상세 정보 조회")
 async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
   
@@ -156,7 +158,8 @@ async def get_store_detail(store_id: str ,db: Session = Depends(get_db)):
   
   return result_store
 
-
+# 매장 정보 수정 (현재는 매장 시간만 수정 가능)
+# TODO : 전화번호, 배너이미지, 썸네일 이미지 수정가능하게
 @store_router.put('/{store_id}', summary="각 매장 상세 정보 수정")
 async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session = Depends(get_db)):
   store = db.query(Store).filter(Store.sid == store_id).first()
@@ -190,9 +193,11 @@ async def update_store(store_id: int, store_data: StoreUpdateSchema, db: Session
   db.commit()
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 수정되었습니다!'})
 
-
+# TODO : 매장 메뉴 수정 API 개발 예정
 
 # *공지 관련*
+
+# 매장 id에 따른 각 매장 공지사항 조회
 @store_router.get('/{store_id}/notice', summary="각 매장 공지사항 조회")
 async def get_notice_store(store_id: int, db: Session = Depends(get_db)):
     notice_list = (
@@ -204,6 +209,7 @@ async def get_notice_store(store_id: int, db: Session = Depends(get_db)):
     return notice_list
 
 
+# 매장 id에 따른 각 매장 공지사항 등록
 @store_router.post('/{store_id}/notice', summary="각 매장 공지사항 등록")
 async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, confirm: bool = Query(False), db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
@@ -251,7 +257,7 @@ async def add_notice(store_id: int, notice_data: StoreUpdateNoticeSchema, confir
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 생성되었습니다!'})
 
 
-
+# 매장 id와 공지사항 id에 따른 공지사항 조회
 @store_router.get('/{store_id}/notice/{notice_id}', summary="각 매장의 해당하는 공지사항 하나 조회")
 async def get_notice(store_id: int, notice_id: int, db: Session = Depends(get_db)):
   
@@ -263,6 +269,8 @@ async def get_notice(store_id: int, notice_id: int, db: Session = Depends(get_db
   
   return notice
 
+
+# 공지사항 id에 따른 공지사항 수정
 @store_router.put('/{store_id}/notice/{notice_id}', summary="각 매장의 해당하는 공지사항 하나 수정")
 async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateNoticeSchema, confirm: bool = Query(False), db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
@@ -309,7 +317,7 @@ async def update_notice(store_id: int, notice_id: int, notice_data: StoreUpdateN
   
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 수정되었습니다!'})
   
-
+# 공지사항 id에 따른 공지사항 삭제
 @store_router.delete('/{store_id}/notice/{notice_id}', summary="각 매장 공지사항 삭제")
 async def delete_notice(store_id: int, notice_id:int, db:Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
 
@@ -335,7 +343,7 @@ async def delete_notice(store_id: int, notice_id:int, db:Session = Depends(get_d
   return JSONResponse(status_code=200, content={'success' : True, 'message' : '정상적으로 삭제되었습니다!'})
   
 
-# 즐겨찾기 추가
+# 매장 즐겨찾기 추가
 @store_router.post('/{store_id}/favorite', summary="매장 즐겨찾기 추가")
 async def create_favorite_store(store_id: int, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
     # JWT 토큰을 통해 유저 확인
@@ -368,7 +376,7 @@ async def create_favorite_store(store_id: int, db: Session = Depends(get_db), to
 
     return JSONResponse(status_code=200, content={'success': True, 'message': '즐겨찾기에 추가되었습니다!'})
 
-# 즐겨찾기 삭제
+# 매장 즐겨찾기 삭제
 @store_router.delete('/{store_id}/favorite', summary="매장 즐겨찾기 삭제")
 async def delete_favorite_store(store_id: int, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
     # JWT 토큰을 통해 유저 확인
