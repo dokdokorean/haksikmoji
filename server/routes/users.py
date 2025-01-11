@@ -696,7 +696,7 @@ async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depend
   if not user:
     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
   
-  if pwd_context.verify(pw, user.password):
+  if pwd_context.verify(pw, user.user_pw):
     db.delete(user)
     db.commit()
   else:
