@@ -628,7 +628,7 @@ async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get
     with open(file_path, "wb") as f:
       f.write(sign_image_data)
     
-    sign_url_data = f"/server/static/{str(user.school.id)}/signatures/{file_name}"
+    sign_url_data = f"/static/{str(user.school.id)}/signatures/{file_name}"
   except Exception as e:
     raise CustomHTTPException(status_code=500, message="서버에러 - 관리자에게 문의바람")
   
