@@ -172,14 +172,17 @@ class User(Base):
   major = Column(String(100), nullable=True)
   gender = Column(String(2), nullable=False)
   phone_number = Column(String(50), nullable=True)
+  # 현재 선택한 학교
+  is_school_selected = Column(Integer, ForeignKey('school.id'), nullable=False)
+  school_selected = relationship('School', foreign_keys=[is_school_selected])
   marketing_term = Column(Boolean, default=False)
   sign_url = Column(String(3000), nullable=True)
   created_at = Column(TIMESTAMP, default=get_skt_time, nullable=False)
   role = Column(Integer, nullable=False)
   
-  # 사용자의 학교 및 관계
+  # 사용자의 인증 학교
   school_id = Column(Integer, ForeignKey('school.id'), nullable=False)
-  school = relationship('School')
+  school = relationship('School', foreign_keys=[school_id])
   
   # 사용자의 학교 인증 여부
   is_school_verified = Column(Boolean, nullable=False, default=False)

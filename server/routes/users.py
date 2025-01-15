@@ -108,7 +108,7 @@ async def create_user(create_data: UserCreateSchema, db: Session = Depends(get_d
     major=None,               # 기본값
     gender=create_data.gender,
     phone_number=create_data.phone_number,
-    school_id=create_data.school_id,
+    is_school_selected=create_data.is_school_selected,
     is_school_verified=False, # 기본값
     sign_url=None,            # 기본값
     marketing_term=create_data.marketing_term,
@@ -242,17 +242,15 @@ async def verified_school(input_data: VerifySchool, db: Session = Depends(get_db
   
   try:
     # 유저 정보 업데이트
-    user.school_id = input_data.school_id
-    user.email = input_data.email
-    user.major = input_data.major
-    user.std_id = input_data.std_id
-    user.is_school_verified = True
-    
-    # 데이터베이스 업데이트
-    db.commit()
-    db.refresh(user)
-    
-    response = JSONResponse(status_code=200, content={
+    if user.email != "" and user.school_id is not None:
+      user.major = input_data.major
+      user.std_id = input_data.std_id
+      user.is_school_verified = True
+      
+      db.commit()
+      db.refresh(user)
+      
+      response = JSONResponse(status_code=200, content={
         "status": 200,
         "isSuccess": True,
         "message": "성공적으로 학교 인증이 완료되었습니다.",
@@ -264,7 +262,14 @@ async def verified_school(input_data: VerifySchool, db: Session = Depends(get_db
           "std_id": user.std_id,
           "is_school_verified": user.is_school_verified,
         },
-    })
+      })
+    else:
+      response = JSONResponse(status_code=400, content={
+        "status": 400,
+        "isSuccess": False,
+        "message": "학교 이메일이 인증되지 않았습니다.",
+        "result": None,
+      })
   except Exception as e:
     raise CustomHTTPException(status_code=500, message="학교 인증 중 문제가 발생했습니다.")
   
@@ -320,7 +325,14 @@ async def verification_email(input_data:VerifyEmail, db: Session = Depends(get_d
   if not user:
     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
   
-  school = db.query(School).filter(School.id == user.school_id).first()
+  existing_user = db.query(User).filter(User.email == input_data.email).first()
+  if existing_user and existing_user.uid != token.uid:
+    raise CustomHTTPException(
+        status_code=409,
+        message="이미 사용 중인 이메일입니다. 다른 이메일을 입력해주세요."
+    )
+  
+  school = db.query(School).filter(School.id == input_data.school_id).first()
   
   if input_data.verify_code is None:
     try:
@@ -379,6 +391,14 @@ async def verification_email(input_data:VerifyEmail, db: Session = Depends(get_d
       verify_response = verify_response.json()
       
       if verify_response.get('success') == True:
+        
+        user.school_id = input_data.school_id
+        user.email = input_data.email
+        
+        # 데이터베이스 업데이트
+        db.commit()
+        db.refresh(user)
+        
         response = JSONResponse(status_code=200, content={
           "status" : 200,
           "isSuccess" : True,
@@ -488,6 +508,7 @@ async def read_users(db: Session = Depends(get_db)):
       role=user.role,
       store_id=user.store_id,
       is_school_verified=user.is_school_verified,
+      school_selected=user.school_selected,
       school=user.school,
       favorite_stores=favorite_stores,  # 즐겨찾기한 매장 리스트 추가
     )
@@ -557,6 +578,7 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
     role=user.role,
     store_id=user.store_id,
     is_school_verified=user.is_school_verified,
+    school_selected=user.school_selected,
     school=user.school,
     favorite_stores=favorite_stores,  # 즐겨찾기한 매장 리스트 추가
   )
@@ -650,42 +672,42 @@ async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get
 
 
 # 유저 한 명 조회 API
-@users_router.get('/{std_id}', response_model=UserSchema, summary="[TEST용] 학번을 통해 가입된 유저 조회")
-async def read_user(std_id: str, db: Session = Depends(get_db)):
-  # std_id에 해당하는 유저를 조회
-  user = db.query(User).filter(User.std_id == std_id).first()
+# @users_router.get('/{std_id}', response_model=UserSchema, summary="[TEST용] 학번을 통해 가입된 유저 조회")
+# async def read_user(std_id: str, db: Session = Depends(get_db)):
+#   # std_id에 해당하는 유저를 조회
+#   user = db.query(User).filter(User.std_id == std_id).first()
 
-  if not user:
-    raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
+#   if not user:
+#     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
 
-  # 유저의 즐겨찾기 매장 가져오기
-  favorite_store_records = db.query(UserFavoriteStore).filter(UserFavoriteStore.uid == user.uid).all()
-  # Favorite 조회 에러 수정해야 함
-  # Store 정보 추출 및 StoreSchema로 변환
-  favorite_stores = []
-  for favorite in favorite_store_records:
-      store = db.query(Store).filter(Store.sid == favorite.store_id).first()
+#   # 유저의 즐겨찾기 매장 가져오기
+#   favorite_store_records = db.query(UserFavoriteStore).filter(UserFavoriteStore.uid == user.uid).all()
+#   # Favorite 조회 에러 수정해야 함
+#   # Store 정보 추출 및 StoreSchema로 변환
+#   favorite_stores = []
+#   for favorite in favorite_store_records:
+#       store = db.query(Store).filter(Store.sid == favorite.store_id).first()
       
-      if store:
-        favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_img_url=store.store_img_url, is_open=store.is_open, category=store.category))
+#       if store:
+#         favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_img_url=store.store_img_url, is_open=store.is_open, category=store.category))
 
-  # UserSchema로 변환할 때 favorite_stores 필드에 매장 리스트 추가
-  user_data = UserSchema(
-    uid=user.uid,
-    std_id=user.std_id,
-    name=user.name,
-    phone_number=user.phone_number,
-    # email=user.email,
-    password=user.password,
-    school=user.school,
-    sign_url=user.sign_url,
-    marketing_term=user.marketing_term,
-    created_at=user.created_at,
-    role=user.role,
-    favorite_stores=favorite_stores  # 즐겨찾기한 매장 리스트 추가
-  )
+#   # UserSchema로 변환할 때 favorite_stores 필드에 매장 리스트 추가
+#   user_data = UserSchema(
+#     uid=user.uid,
+#     std_id=user.std_id,
+#     name=user.name,
+#     phone_number=user.phone_number,
+#     # email=user.email,
+#     password=user.password,
+#     school=user.school,
+#     sign_url=user.sign_url,
+#     marketing_term=user.marketing_term,
+#     created_at=user.created_at,
+#     role=user.role,
+#     favorite_stores=favorite_stores  # 즐겨찾기한 매장 리스트 추가
+#   )
 
-  return user_data
+#   return user_data
 
 @users_router.delete('/me', summary="009. 현재 로그인 된 유저 삭제")
 async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
@@ -698,6 +720,19 @@ async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depend
   
   if pwd_context.verify(pw, user.user_pw):
     db.delete(user)
+    try:
+      payload={
+        "key" : UNIVCERT_API_KEY
+      }
+      
+      requests.post(f"{UNIVCERT_URL}/clear/{user.email}", json=payload)
+    except:
+      response = JSONResponse(status_code=500, content={
+        "status" : 500,
+        "isSuccess" : False,
+        "message" : f"서버오류 - 관리자에게 문의바람",
+        "result": None,
+      })
     db.commit()
   else:
     raise CustomHTTPException(status_code=400, message="비밀번호가 일치하지 않습니다.")

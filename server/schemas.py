@@ -159,7 +159,8 @@ class UserSchema(BaseModel):
   sign_url: Optional[str] = None
   created_at: Optional[datetime] = None
   role: int = Field(1, description="1 : 일반 유저 / 2 : 매장 사장님 / 3 : 쿠폰 관리 교직원")
-  school: SchoolSchema
+  school: Optional[SchoolSchema] = None
+  school_selected: SchoolSchema
   
   # 즐겨찾기한 매장 리스트 추가
   favorite_stores: List[StoreListSchema] = []  # 유저가 즐겨찾기한 매장 리스트
@@ -178,7 +179,7 @@ class UserCreateSchema(BaseModel):
   user_birth:str
   gender:str
   phone_number: str
-  school_id: int
+  is_school_selected: int
   marketing_term: bool
 
 # 유저 로그인 Schema
@@ -200,13 +201,12 @@ class VerifyPhoneNum(BaseModel):
 
 # 학교인증 Schema
 class VerifySchool(BaseModel):
-  school_id: int
-  email: str
   major: str
   std_id: str
 
 # 이메일 검증 Schema
 class VerifyEmail(BaseModel):
+  school_id: int
   email: str
   verify_code: Optional[str] = None
 
