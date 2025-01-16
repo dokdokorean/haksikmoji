@@ -504,7 +504,7 @@ async def read_users(db: Session = Depends(get_db)):
       phone_number=user.phone_number,
       marketing_term=user.marketing_term,
       sign_url=user.sign_url,
-      # created_at=user.created_at,
+      created_at=user.created_at,
       role=user.role,
       store_id=user.store_id,
       is_school_verified=user.is_school_verified,
@@ -593,7 +593,7 @@ async def read_current_user(db: Session = Depends(get_db), token: str = Depends(
   return response
 
 @users_router.put('/me/password', summary="010. 현재 로그인된 유저 비밀번호 수정")
-async def update_password(current_paassword: str, new_password: str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
+async def update_password(current_password: str, new_password: str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
   
   # uid에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()
@@ -603,7 +603,7 @@ async def update_password(current_paassword: str, new_password: str, db: Session
     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
   
   # 현재 비밀번호가 맞는지 검증
-  if not pwd_context.verify(current_paassword, user.user_pw):
+  if not pwd_context.verify(current_password, user.user_pw):
     raise CustomHTTPException(status_code=400, message="현재 비밀번호가 올바르지 않습니다.")
   
   # 새로운 비밀번호와 기존 비밀번호가 동일하면 예외처리
@@ -670,44 +670,50 @@ async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get
   return response
 
 
-
 # 유저 한 명 조회 API
-# @users_router.get('/{std_id}', response_model=UserSchema, summary="[TEST용] 학번을 통해 가입된 유저 조회")
-# async def read_user(std_id: str, db: Session = Depends(get_db)):
-#   # std_id에 해당하는 유저를 조회
-#   user = db.query(User).filter(User.std_id == std_id).first()
+@users_router.get('/{user_id}', response_model=UserSchema, summary="[TEST용] 아이디를 통한 유저 조회")
+async def read_user(user_id: str, db: Session = Depends(get_db)):
+  # std_id에 해당하는 유저를 조회
+  user = db.query(User).filter(User.user_id == user_id).first()
 
-#   if not user:
-#     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
+  if not user:
+    raise CustomHTTPException(status_code=404, message="해당 사용자를 찾을 수 없습니다.")
 
-#   # 유저의 즐겨찾기 매장 가져오기
-#   favorite_store_records = db.query(UserFavoriteStore).filter(UserFavoriteStore.uid == user.uid).all()
-#   # Favorite 조회 에러 수정해야 함
-#   # Store 정보 추출 및 StoreSchema로 변환
-#   favorite_stores = []
-#   for favorite in favorite_store_records:
-#       store = db.query(Store).filter(Store.sid == favorite.store_id).first()
+  # 유저의 즐겨찾기 매장 가져오기
+  favorite_store_records = db.query(UserFavoriteStore).filter(UserFavoriteStore.uid == user.uid).all()
+  # Favorite 조회 에러 수정해야 함
+  # Store 정보 추출 및 StoreSchema로 변환
+  favorite_stores = []
+  for favorite in favorite_store_records:
+      store = db.query(Store).filter(Store.sid == favorite.store_id).first()
       
-#       if store:
-#         favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_img_url=store.store_img_url, is_open=store.is_open, category=store.category))
+      if store:
+        favorite_stores.append(StoreListSchema(sid=store.sid, store_name=store.store_name, store_number=store.store_number, store_location=store.store_location, store_img_url=store.store_img_url, is_open=store.is_open, category=store.category))
 
-#   # UserSchema로 변환할 때 favorite_stores 필드에 매장 리스트 추가
-#   user_data = UserSchema(
-#     uid=user.uid,
-#     std_id=user.std_id,
-#     name=user.name,
-#     phone_number=user.phone_number,
-#     # email=user.email,
-#     password=user.password,
-#     school=user.school,
-#     sign_url=user.sign_url,
-#     marketing_term=user.marketing_term,
-#     created_at=user.created_at,
-#     role=user.role,
-#     favorite_stores=favorite_stores  # 즐겨찾기한 매장 리스트 추가
-#   )
+  # UserSchema로 변환할 때 favorite_stores 필드에 매장 리스트 추가
+  user_data = UserSchema(
+    uid=user.uid,
+    name=user.name,
+    user_id=user.user_id,
+    user_pw=user.user_pw,
+    user_birth=user.user_birth,
+    std_id=user.std_id,
+    email=user.email,
+    major=user.major,
+    gender=user.gender,
+    phone_number=user.phone_number,
+    marketing_term=user.marketing_term,
+    sign_url=user.sign_url,
+    # created_at=user.created_at,
+    role=user.role,
+    store_id=user.store_id,
+    is_school_verified=user.is_school_verified,
+    school_selected=user.school_selected,
+    school=user.school,
+    favorite_stores=favorite_stores,  # 즐겨찾기한 매장 리스트 추가
+  )
 
-#   return user_data
+  return user_data
 
 @users_router.delete('/me', summary="009. 현재 로그인 된 유저 삭제")
 async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depends(verify_jwt_token)):
@@ -745,32 +751,3 @@ async def delete_user(pw:str, db: Session = Depends(get_db), token: str = Depend
   })
   
   return response
-
-# TODO: 학번 인증 검증 삭제
-# @users_router.post('/stdIdValidation', summary="학번 인증 API")
-# async def validation_student(input_data: UserStdSchema):
-  
-#   headers = {
-#     'Content-Type' : 'application/json'
-#   }
-  
-#   params = {
-#     'uid' : input_data.std_id
-#   }
-  
-#   try:
-#     response = requests.get(f'{YONSEI_AUTH_URL}/ywis/admin/yonsei_check.jsp', headers=headers, params=params, verify=True)
-    
-#     if response.status_code != 200:
-#       raise HTTPException(status_code=500, detail=f"요청 실패: {response.status_code}")
-    
-#     student_state = response.json()
-    
-#     if not student_state.get('name'):
-#       return JSONResponse(status_code=200, content={'success': False, 'body': student_state, 'message': '교내에 존재하지 않는 사용자'})
-    
-#   except Exception as e:
-#     print(f'서버 오류: {e}')
-#     raise HTTPException(status_code=500, detail="유저 정보 조회 불가능")
-  
-#   return JSONResponse(status_code=200, content={'success': True, 'body': student_state})
