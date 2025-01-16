@@ -631,9 +631,13 @@ async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get
   # std_id에 해당하는 유저를 조회
   user = db.query(User).filter(User.uid == token.uid).first()
   
-  # 현재 로그인 된 유저 조회
+  # 사용자가 없을 시 처리
   if not user:
     raise CustomHTTPException(status_code=404, message="로그인 된 유저를 찾을 수 없습니다.")
+  
+  # 사용자가 학교인증이 되지 않을 시 처리
+  if not user.school:
+    raise CustomHTTPException(status_code=404, message="학교 인증이 되지 않았습니다.")
   
   # 사인 데이터 처리
   try:
@@ -642,7 +646,7 @@ async def update_sign(sign_update_url: UserSignSchema, db: Session = Depends(get
     sign_image_data = base64.b64decode(sign_data)
     
     # 파일 이름 생성 및 파일 경로 지정
-    file_name = f"{user.std_id}_sign.png"
+    file_name = f"{user.user_id}_sign.png"
     file_path = os.path.join("server","static", str(user.school.id),"signatures", file_name)
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
